@@ -1,0 +1,222 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:UTerminal.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="720"
+             x:Class="UTerminal.Views.MainView"
+             x:DataType="vm:MainViewModel"
+             Padding="10">
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+         to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <vm:MainViewModel />
+    </Design.DataContext>
+    
+    <UserControl.Styles>
+        <StyleInclude Source="avares://UTerminal/Styles/OptionRadioStyle.axaml"/>
+    </UserControl.Styles>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="0.5*"/>
+            <RowDefinition Height="0.1*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Top" Spacing="10" Height="160">
+            <!-- 기본 메뉴 뷰 -->
+            <StackPanel Grid.Column="0">
+                <StackPanel.Styles>
+                    <Style Selector="Button">
+                        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                    </Style>
+                </StackPanel.Styles>
+                
+                <Button Command="{Binding ConnectCommand}">Connect</Button>
+                <Button Command="{Binding ReScanCommand}">ReScan</Button>
+                <Button Command="{Binding ComPortRadioChangedCommand}">Quit</Button>
+            </StackPanel>
+            <!-- 기본 메뉴 뷰 -->
+          
+            <!-- 컴포트 선택 영역 -->
+            <Panel>
+                <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
+                    <ItemsControl ItemsSource="{Binding DefaultComPortList}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="2"></UniformGrid>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <RadioButton Content="{Binding Text}"
+                                    GroupName="COMPortGroup"
+                                    IsChecked="{Binding IsSelected}"
+                                    IsEnabled="{Binding IsEnabled}">
+                                    
+                                    <Interaction.Behaviors>
+                                        <EventTriggerBehavior EventName="IsCheckedChanged">
+                                            <InvokeCommandAction 
+                                                Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ComPortRadioChangedCommand}"
+                                                CommandParameter="{Binding}"/>
+                                        </EventTriggerBehavior>
+                                    </Interaction.Behaviors>
+                                    
+                                </RadioButton>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+
+                <TextBlock Text="COM Port"
+                    FontSize="10"
+                    Background="White"
+                    Foreground="Black"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Margin="0,-10,0,0"
+                    Padding="5"/>
+            </Panel>
+            <!-- 컴포트 선택 영역 -->
+
+            <!-- 보드레이드 설정 영역 -->
+            <Panel>
+                <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
+                    <ItemsControl ItemsSource="{Binding DefaultBaudRateList}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="3"></UniformGrid>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <RadioButton Content="{Binding Text}"
+                                    GroupName="BaudRateGroup"
+                                    IsChecked="{Binding IsSelected}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+
+                <TextBlock Text="Baudrate"
+                    FontSize="10"
+                    Background="White"
+                    Foreground="Black"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Margin="0,-10,0,0"
+                    Padding="5"/>
+            </Panel>
+            <!-- 보드레이드 설정 영역 -->
+
+            <!-- 데이터 비트 -->
+            <Panel>
+                <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
+                    <ItemsControl ItemsSource="{Binding DefaultDatabitsList}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="1"></UniformGrid>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <RadioButton Content="{Binding Text}"
+                                    GroupName="DataBitsGroup"
+                                    IsChecked="{Binding IsSelected}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+
+                <TextBlock Text="Data bits"
+                    FontSize="10"
+                    Background="White"
+                    Foreground="Black"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Margin="0,-10,0,0"
+                    Padding="5"/>
+            </Panel>
+            <!-- 데이터 비트 -->
+
+            <!-- 패리티 설정 -->
+            <Panel>
+                <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
+                    <ItemsControl ItemsSource="{Binding DefaultParityList}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                            <UniformGrid Columns="1"></UniformGrid>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <RadioButton Content="{Binding Text}"
+                                    GroupName="ParityGroup"
+                                    IsChecked="{Binding IsSelected}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+
+                <TextBlock Text="Parity"
+                    FontSize="10"
+                    Background="White"
+                    Foreground="Black"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Margin="0,-10,0,0"
+                    Padding="5"/>
+            </Panel>
+            <!-- 패리티 설정 -->
+
+            <!-- 스탑비트 설정 -->
+            <Panel>
+                <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
+                    <ItemsControl ItemsSource="{Binding DefaultStopBitsList}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                            <UniformGrid Columns="1"></UniformGrid>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <RadioButton Content="{Binding Text}"
+                                    GroupName="StopBitsGroup"
+                                    IsChecked="{Binding IsSelected}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+
+                <TextBlock Text="Stop bits"
+                    FontSize="10"
+                    Background="White"
+                    Foreground="Black"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Margin="0,-10,0,0"
+                    Padding="5"/>
+            </Panel>
+            <!-- 스탑비트 설정 -->
+          
+        </StackPanel>
+        
+        <!-- 시리얼 데이터 뷰 옵션 -->
+        <StackPanel Grid.Row="1">
+            
+        </StackPanel>
+        <!-- 시리얼 데이터 뷰 옵션 -->
+        
+        <!-- 시리얼 데이터 뷰 -->
+        <Border Grid.Row="2" BorderBrush="Black" BorderThickness="2" CornerRadius="8" Padding="5">
+            <DataGrid ItemsSource="{Binding DataList}" AutoGenerateColumns="False" Height="500">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Data" Binding="{Binding}" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+        <!-- 시리얼 데이터 뷰 -->
+    </Grid>
+    
+</UserControl>
