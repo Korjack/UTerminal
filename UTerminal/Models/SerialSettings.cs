@@ -7,7 +7,7 @@ namespace UTerminal.Models;
 
 public class SerialSettings
 {
-    public string PortName { get; set; } = string.Empty;
+    public string PortPath { get; set; } = string.Empty;
 
     public int BaudRate
     {
@@ -40,7 +40,7 @@ public class SerialSettings
 
     public int DataBits
     {
-        get => _baudRate;
+        get => _dataBits;
         set
         {
             foreach (var dataBitsItem in RadioDataBitsItems)
@@ -64,7 +64,7 @@ public class SerialSettings
             _stopBits = value;
         }
     }
-    private StopBits _stopBits = StopBits.None;
+    private StopBits _stopBits = StopBits.One;
     
 
     public ObservableCollection<OptionRadioItem> RadioComPortItems { get; } =
@@ -118,7 +118,7 @@ public class SerialSettings
     
     public ObservableCollection<OptionRadioItem> RadioStopBitsItems { get; } =
     [
-        new() { Text = "1", Value = (int)StopBits.None, IsSelected = true},
+        new() { Text = "1", Value = (int)StopBits.One, IsSelected = true},
         new() { Text = "1.5", Value = (int)StopBits.OnePointFive},
         new() { Text = "2", Value = (int)StopBits.Two },
     ];

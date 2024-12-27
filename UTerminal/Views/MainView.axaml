@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:UTerminal.ViewModels"
+             xmlns:cv="clr-namespace:UTerminal.Converter"
              mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="720"
              x:Class="UTerminal.Views.MainView"
              x:DataType="vm:MainViewModel"
@@ -16,16 +17,20 @@
     <UserControl.Styles>
         <StyleInclude Source="avares://UTerminal/Styles/OptionRadioStyle.axaml"/>
     </UserControl.Styles>
+    <UserControl.Resources>
+        <cv:BoolToStringConverter x:Key="BoolToStringConverter"/>
+    </UserControl.Resources>
     
-    <Grid>
+    <Grid RowSpan="5" ShowGridLines="True">
         <Grid.RowDefinitions>
             <RowDefinition Height="0.5*"/>
             <RowDefinition Height="0.1*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="0.05*"/>
         </Grid.RowDefinitions>
         <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Top" Spacing="10" Height="160">
             <!-- 기본 메뉴 뷰 -->
-            <StackPanel Grid.Column="0">
+            <StackPanel>
                 <StackPanel.Styles>
                     <Style Selector="Button">
                         <Setter Property="HorizontalAlignment" Value="Stretch"/>
@@ -33,14 +38,17 @@
                     </Style>
                 </StackPanel.Styles>
                 
-                <Button Command="{Binding ConnectCommand}">Connect</Button>
-                <Button Command="{Binding ReScanCommand}">ReScan</Button>
-                <Button Command="{Binding ComPortRadioChangedCommand}">Quit</Button>
+                <Button Command="{Binding ConnectCommand}" 
+                        Content="{Binding !IsConnected,
+                        Converter={StaticResource BoolToStringConverter},
+                        ConverterParameter='Connect,Disconnect'}"/>
+                <Button Command="{Binding ReScanCommand}" IsEnabled="{Binding !IsConnected}" Content="Recan"/>
+                <Button Command="{Binding QuitCommand}">Quit</Button>
             </StackPanel>
             <!-- 기본 메뉴 뷰 -->
           
             <!-- 컴포트 선택 영역 -->
-            <Panel>
+            <Panel IsEnabled="{Binding !IsConnected}">
                 <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
                     <ItemsControl ItemsSource="{Binding DefaultComPortList}">
                         <ItemsControl.ItemsPanel>
@@ -56,7 +64,7 @@
                                     IsEnabled="{Binding IsEnabled}">
                                     
                                     <Interaction.Behaviors>
-                                        <EventTriggerBehavior EventName="IsCheckedChanged">
+                                        <EventTriggerBehavior EventName="Click">
                                             <InvokeCommandAction 
                                                 Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ComPortRadioChangedCommand}"
                                                 CommandParameter="{Binding}"/>
@@ -81,7 +89,7 @@
             <!-- 컴포트 선택 영역 -->
 
             <!-- 보드레이드 설정 영역 -->
-            <Panel>
+            <Panel IsEnabled="{Binding !IsConnected}">
                 <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
                     <ItemsControl ItemsSource="{Binding DefaultBaudRateList}">
                         <ItemsControl.ItemsPanel>
@@ -111,7 +119,7 @@
             <!-- 보드레이드 설정 영역 -->
 
             <!-- 데이터 비트 -->
-            <Panel>
+            <Panel IsEnabled="{Binding !IsConnected}">
                 <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
                     <ItemsControl ItemsSource="{Binding DefaultDatabitsList}">
                         <ItemsControl.ItemsPanel>
@@ -141,7 +149,7 @@
             <!-- 데이터 비트 -->
 
             <!-- 패리티 설정 -->
-            <Panel>
+            <Panel IsEnabled="{Binding !IsConnected}">
                 <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
                     <ItemsControl ItemsSource="{Binding DefaultParityList}">
                         <ItemsControl.ItemsPanel>
@@ -171,7 +179,7 @@
             <!-- 패리티 설정 -->
 
             <!-- 스탑비트 설정 -->
-            <Panel>
+            <Panel IsEnabled="{Binding !IsConnected}">
                 <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
                     <ItemsControl ItemsSource="{Binding DefaultStopBitsList}">
                         <ItemsControl.ItemsPanel>
@@ -210,13 +218,19 @@
         
         <!-- 시리얼 데이터 뷰 -->
         <Border Grid.Row="2" BorderBrush="Black" BorderThickness="2" CornerRadius="8" Padding="5">
-            <DataGrid ItemsSource="{Binding DataList}" AutoGenerateColumns="False" Height="500">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Data" Binding="{Binding}" />
-                </DataGrid.Columns>
-            </DataGrid>
+            <TextBox Text="{Binding ReceivedData}" 
+                     AcceptsReturn="True"
+                     IsReadOnly="True"
+                     CaretIndex="{Binding DataScrollPos}"
+                     BorderThickness="0"/>
         </Border>
         <!-- 시리얼 데이터 뷰 -->
+        
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="3">
+            <!-- 데이터 전송 속도 -->
+            <TextBlock TextAlignment="Center" Text="{Binding DataRate, StringFormat='Data Rate: {0:N2} Hz'}"/>
+            <!-- 데이터 전송 속도 -->
+        </StackPanel>
     </Grid>
     
 </UserControl>
