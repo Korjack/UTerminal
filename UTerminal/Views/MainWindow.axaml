@@ -6,7 +6,6 @@
         xmlns:views="clr-namespace:UTerminal.Views"
         mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="720"
         x:Class="UTerminal.Views.MainWindow"
-        Icon="/Assets/avalonia-logo.ico"
         Title="UTerminal"
         Width="1280"
         Height="720">
