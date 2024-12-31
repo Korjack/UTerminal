@@ -4,8 +4,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UTerminal", "UTerminal\UTer
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UTerminal.Desktop", "UTerminal.Desktop\UTerminal.Desktop.csproj", "{A5BEEEC6-E5EC-445D-BE1A-FC8B90E4C1E8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UTerminal.Browser", "UTerminal.Browser\UTerminal.Browser.csproj", "{2F60CAC7-8CF2-4AF3-BDED-BD17BB80F7FD}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,9 +18,5 @@ Global
 		{A5BEEEC6-E5EC-445D-BE1A-FC8B90E4C1E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A5BEEEC6-E5EC-445D-BE1A-FC8B90E4C1E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A5BEEEC6-E5EC-445D-BE1A-FC8B90E4C1E8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2F60CAC7-8CF2-4AF3-BDED-BD17BB80F7FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2F60CAC7-8CF2-4AF3-BDED-BD17BB80F7FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2F60CAC7-8CF2-4AF3-BDED-BD17BB80F7FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2F60CAC7-8CF2-4AF3-BDED-BD17BB80F7FD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
