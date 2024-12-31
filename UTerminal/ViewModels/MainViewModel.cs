@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Ports;
 using System.Linq;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
@@ -26,6 +27,7 @@ public class MainViewModel : ViewModelBase
     #region Init Serial Device
     
     private readonly SerialDevice _serialDevice;
+    public SerialSettings SerialSettings => _serialDevice.SerialSettings;
     
     // 시리얼 데이터 바인딩 변수
     private string _receivedData = string.Empty;
@@ -62,27 +64,35 @@ public class MainViewModel : ViewModelBase
     #region Init Default Value
     
     public ObservableCollection<OptionRadioItem> DefaultComPortList { get; private set; }
-    public ObservableCollection<OptionRadioItem> DefaultBaudRateList { get; private set; }
-    public ObservableCollection<OptionRadioItem> DefaultDatabitsList { get; private set; }
-    public ObservableCollection<OptionRadioItem> DefaultParityList { get; private set; }
-    public ObservableCollection<OptionRadioItem> DefaultStopBitsList { get; private set; }
+    public Array BaudRatesOption => Enum.GetValues(typeof(BaudRateType));
+    public Array ParitysOption => Enum.GetValues(typeof(ParityType));
+    public Array DataBitsOption => Enum.GetValues(typeof(DataBitsType));
+    public Array StopBitsOption => Enum.GetValues(typeof(StopBitsType));
     
     #endregion
     
     #region Init Command
-    
+
+    #region 기본메뉴 커맨드
+
     public ICommand QuitCommand { get; set; }
     public ICommand ReScanCommand { get; set; }
-    public ICommand ComPortRadioChangedCommand { get; set; }
     public ICommand ConnectCommand { get; set; }
+
+    #endregion
+
+    #region 옵션 설정 커맨드
+
+    public ICommand ComPortRadioChangedCommand { get; private set; }        // 포트 연결
+    public ICommand SerialSettingChangedCommand { get; private set; }       // 시리얼 설정 라디오 버튼 변경 커멘드
+
+    #endregion
     
     #endregion
     
     private readonly Stopwatch _stopwatch = new();
 
     #endregion
-    
-    
     
 
     #region 생성 및 초기화
@@ -105,10 +115,6 @@ public class MainViewModel : ViewModelBase
         
         // 기본 설정값 표기
         DefaultComPortList = settings.RadioComPortItems;
-        DefaultBaudRateList = settings.RadioBaudRateItems;
-        DefaultDatabitsList = settings.RadioDataBitsItems;
-        DefaultParityList = settings.RadioParityItems;
-        DefaultStopBitsList = settings.RadioStopBitsItems;
 
         return settings;
     }
@@ -152,10 +158,14 @@ public class MainViewModel : ViewModelBase
     /// </summary>
     private void InitializeCommands()
     {
+        // 기본메뉴 커맨드
         QuitCommand = ReactiveCommand.Create(QuitProgram);
         ReScanCommand = ReactiveCommand.Create(ReScanSerialPort);
-        ComPortRadioChangedCommand = ReactiveCommand.Create<OptionRadioItem>(ComPortRadio_Clicked);
         ConnectCommand = ReactiveCommand.Create(ConnectSerialPort);
+        
+        // 옵션 설정 커맨드
+        ComPortRadioChangedCommand = ReactiveCommand.Create<OptionRadioItem>(ComPortRadio_Clicked);
+        SerialSettingChangedCommand = ReactiveCommand.Create<object>(SerialSettingRadio_Clicked);
     }
 
 
@@ -167,7 +177,7 @@ public class MainViewModel : ViewModelBase
     /// <summary>
     /// 프로그램을 종료합니다.
     /// </summary>
-    private static void QuitProgram()
+    private void QuitProgram()
     {
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
         {
@@ -181,11 +191,6 @@ public class MainViewModel : ViewModelBase
     private void ReScanSerialPort()
     {
         _serialDevice.GetPortPaths();
-    }
-
-    private void ComPortRadio_Clicked(OptionRadioItem item)
-    {
-        _serialDevice.SetPortPath(_serialDevice.SerialPortList[item.Value]);
     }
     
     /// <summary>
@@ -204,6 +209,37 @@ public class MainViewModel : ViewModelBase
         }
         
         Debug.WriteLine($"Serial Connect Status: {IsConnected}");
+    }
+    
+    
+    
+    private void ComPortRadio_Clicked(OptionRadioItem item)
+    {
+        _serialDevice.SetPortPath(_serialDevice.SerialPortList[item.Value]);
+    }
+
+    private void SerialSettingRadio_Clicked(object? setting)
+    {
+        switch (setting)
+        {
+            case BaudRateType baudRate:                 // BaudRate
+                SerialSettings.BaudRate = baudRate;
+                break;
+            case ParityType parity:                     // Parity
+                SerialSettings.Parity = parity;
+                break;
+            case DataBitsType dataBits:                 // DataBits
+                SerialSettings.DataBits = dataBits;
+                break;
+            case StopBitsType stopBits:                 // StopBits
+                SerialSettings.StopBits = stopBits;
+                break;
+            default:                                    // Default
+                Debug.WriteLine($"Serial Setting Object: {setting} / Type: {setting?.GetType()}");
+                break;
+        }
+        
+        this.RaisePropertyChanged(nameof(SerialSettings));
     }
     
     #endregion

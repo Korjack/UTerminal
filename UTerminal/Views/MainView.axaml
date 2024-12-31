@@ -19,16 +19,18 @@
     </UserControl.Styles>
     <UserControl.Resources>
         <cv:BoolToStringConverter x:Key="BoolToStringConverter"/>
+        <cv:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
+        <cv:EnumDescriptionConverter x:Key="EnumDescriptionConverter"/>
     </UserControl.Resources>
     
     <Grid RowSpan="5" ShowGridLines="True">
         <Grid.RowDefinitions>
-            <RowDefinition Height="0.5*"/>
+            <RowDefinition Height="0.4*"/>
             <RowDefinition Height="0.1*"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="0.05*"/>
         </Grid.RowDefinitions>
-        <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Top" Spacing="10" Height="160">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Stretch" Spacing="10" Height="160">
             <!-- 기본 메뉴 뷰 -->
             <StackPanel>
                 <StackPanel.Styles>
@@ -91,7 +93,7 @@
             <!-- 보드레이드 설정 영역 -->
             <Panel IsEnabled="{Binding !IsConnected}">
                 <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
-                    <ItemsControl ItemsSource="{Binding DefaultBaudRateList}">
+                    <ItemsControl ItemsSource="{Binding BaudRatesOption}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <UniformGrid Columns="3"></UniformGrid>
@@ -99,9 +101,23 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <RadioButton Content="{Binding Text}"
-                                    GroupName="BaudRateGroup"
-                                    IsChecked="{Binding IsSelected}"/>
+                                <RadioButton Content="{Binding Converter={StaticResource EnumDescriptionConverter}}"
+                                             GroupName="BaudRateGroup">
+                                    <RadioButton.IsChecked>
+                                        <MultiBinding Converter="{StaticResource EnumToBooleanConverter}">
+                                            <Binding/>
+                                            <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).SerialSettings.BaudRate"/>
+                                        </MultiBinding>
+                                    </RadioButton.IsChecked>
+                                    
+                                    <Interaction.Behaviors>
+                                        <EventTriggerBehavior EventName="Click">
+                                            <InvokeCommandAction 
+                                                Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SerialSettingChangedCommand}"
+                                                CommandParameter="{Binding}"/>
+                                        </EventTriggerBehavior>
+                                    </Interaction.Behaviors>
+                                </RadioButton>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -117,41 +133,11 @@
                     Padding="5"/>
             </Panel>
             <!-- 보드레이드 설정 영역 -->
-
-            <!-- 데이터 비트 -->
-            <Panel IsEnabled="{Binding !IsConnected}">
-                <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
-                    <ItemsControl ItemsSource="{Binding DefaultDatabitsList}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <UniformGrid Columns="1"></UniformGrid>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <RadioButton Content="{Binding Text}"
-                                    GroupName="DataBitsGroup"
-                                    IsChecked="{Binding IsSelected}"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </Border>
-
-                <TextBlock Text="Data bits"
-                    FontSize="10"
-                    Background="White"
-                    Foreground="Black"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Top"
-                    Margin="0,-10,0,0"
-                    Padding="5"/>
-            </Panel>
-            <!-- 데이터 비트 -->
-
+            
             <!-- 패리티 설정 -->
             <Panel IsEnabled="{Binding !IsConnected}">
                 <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
-                    <ItemsControl ItemsSource="{Binding DefaultParityList}">
+                    <ItemsControl ItemsSource="{Binding ParitysOption}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                             <UniformGrid Columns="1"></UniformGrid>
@@ -159,9 +145,23 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <RadioButton Content="{Binding Text}"
-                                    GroupName="ParityGroup"
-                                    IsChecked="{Binding IsSelected}"/>
+                                <RadioButton Content="{Binding Converter={StaticResource EnumDescriptionConverter}}"
+                                             GroupName="ParityGroup">
+                                    <RadioButton.IsChecked>
+                                        <MultiBinding Converter="{StaticResource EnumToBooleanConverter}">
+                                            <Binding/>
+                                            <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).SerialSettings.Parity"/>
+                                        </MultiBinding>
+                                    </RadioButton.IsChecked>
+                                    
+                                    <Interaction.Behaviors>
+                                        <EventTriggerBehavior EventName="Click">
+                                            <InvokeCommandAction 
+                                                Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SerialSettingChangedCommand}"
+                                                CommandParameter="{Binding}"/>
+                                        </EventTriggerBehavior>
+                                    </Interaction.Behaviors>
+                                </RadioButton>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -178,10 +178,54 @@
             </Panel>
             <!-- 패리티 설정 -->
 
+            <!-- 데이터 비트 -->
+            <Panel IsEnabled="{Binding !IsConnected}">
+                <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
+                    <ItemsControl ItemsSource="{Binding DataBitsOption}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="1"></UniformGrid>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <RadioButton Content="{Binding Converter={StaticResource EnumDescriptionConverter}}"
+                                             GroupName="DataBitsGroup">
+                                    <RadioButton.IsChecked>
+                                        <MultiBinding Converter="{StaticResource EnumToBooleanConverter}">
+                                            <Binding/>
+                                            <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).SerialSettings.DataBits"/>
+                                        </MultiBinding>
+                                    </RadioButton.IsChecked>
+                                    
+                                    <Interaction.Behaviors>
+                                        <EventTriggerBehavior EventName="Click">
+                                            <InvokeCommandAction 
+                                                Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SerialSettingChangedCommand}"
+                                                CommandParameter="{Binding}"/>
+                                        </EventTriggerBehavior>
+                                    </Interaction.Behaviors>
+                                </RadioButton>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+
+                <TextBlock Text="Data bits"
+                    FontSize="10"
+                    Background="White"
+                    Foreground="Black"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Margin="0,-10,0,0"
+                    Padding="5"/>
+            </Panel>
+            <!-- 데이터 비트 -->
+
             <!-- 스탑비트 설정 -->
             <Panel IsEnabled="{Binding !IsConnected}">
                 <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
-                    <ItemsControl ItemsSource="{Binding DefaultStopBitsList}">
+                    <ItemsControl ItemsSource="{Binding StopBitsOption}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                             <UniformGrid Columns="1"></UniformGrid>
@@ -189,9 +233,23 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <RadioButton Content="{Binding Text}"
-                                    GroupName="StopBitsGroup"
-                                    IsChecked="{Binding IsSelected}"/>
+                                <RadioButton Content="{Binding Converter={StaticResource EnumDescriptionConverter}}"
+                                             GroupName="StopBitsGroup">
+                                    <RadioButton.IsChecked>
+                                        <MultiBinding Converter="{StaticResource EnumToBooleanConverter}">
+                                            <Binding/>
+                                            <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).SerialSettings.StopBits"/>
+                                        </MultiBinding>
+                                    </RadioButton.IsChecked>
+                                    
+                                    <Interaction.Behaviors>
+                                        <EventTriggerBehavior EventName="Click">
+                                            <InvokeCommandAction 
+                                                Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SerialSettingChangedCommand}"
+                                                CommandParameter="{Binding}"/>
+                                        </EventTriggerBehavior>
+                                    </Interaction.Behaviors>
+                                </RadioButton>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

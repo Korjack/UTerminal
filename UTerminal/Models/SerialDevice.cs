@@ -22,17 +22,18 @@ public class SerialDevice : IDisposable
 
     private SerialPort? _serialPort;
     private readonly SerialSettings _settings;
+    public SerialSettings SerialSettings => _settings;
     
     public bool IsConnected => _serialPort?.IsOpen ?? false;        // 시리얼 연결 여부
-    
-    public string[] SerialPortList { get; private set; }            // 시리얼 연결 가능 목록
+
+    public string[] SerialPortList { get; private set; } = [];            // 시리얼 연결 가능 목록
 
     #endregion
 
     #region 데이터 처리 변수
     
     public event EventHandler<SerialMessage>? MessageReceived;      // 이벤트 연결 핸들러
-    private CancellationTokenSource _cancellationTokenSource;
+    private CancellationTokenSource _cancellationTokenSource = new ();
     
     private readonly ConcurrentQueue<SerialMessage> _messages = new();      // 메시지 처리 큐
     private readonly List<byte> _bufferList = [];                        // 수신된 누적 바이트 버퍼 리스트
@@ -51,12 +52,15 @@ public class SerialDevice : IDisposable
     #endregion
 
     #endregion
-    
-    
+
+
+    public SerialDevice()
+    {
+        _settings = new SerialSettings();
+    }
     public SerialDevice(SerialSettings settings)
     {
         _settings = settings;
-        _cancellationTokenSource = new CancellationTokenSource();
     }
     
     
@@ -72,10 +76,10 @@ public class SerialDevice : IDisposable
         {
             _serialPort = new SerialPort(
                 _settings.PortPath,
-                _settings.BaudRate,
-                _settings.Parity,
-                _settings.DataBits,
-                _settings.StopBits
+                (int)_settings.BaudRate,
+                (Parity)_settings.Parity,
+                (int)_settings.DataBits,
+                (StopBits)_settings.StopBits
             );
 
             if (_cancellationTokenSource.IsCancellationRequested)
