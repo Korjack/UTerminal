@@ -57,9 +57,8 @@ public class MainViewModel : ViewModelBase
     }
     private int _messageCount = 0;
     
-    public int DataScrollPos => int.MaxValue;       // TextBox 스크롤 장치
-    
     #endregion
+    
     
     #region Init Default Value
     
@@ -70,6 +69,7 @@ public class MainViewModel : ViewModelBase
     public Array StopBitsOption => Enum.GetValues(typeof(StopBitsType));
     
     #endregion
+    
     
     #region Init Command
 
@@ -259,7 +259,7 @@ public class MainViewModel : ViewModelBase
             string s = Encoding.ASCII.GetString(message.Data) + Environment.NewLine;
             _textBuilder.Append(s);
             
-            if (_textBuilder.Length > 1000)
+            if (_textBuilder.Length > 10000)
             {
                 _textBuilder.Remove(0, s.Length);
             }

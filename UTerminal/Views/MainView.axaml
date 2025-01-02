@@ -4,6 +4,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:UTerminal.ViewModels"
              xmlns:cv="clr-namespace:UTerminal.Converter"
+             xmlns:behaviors="clr-namespace:UTerminal.Behaviors"
+             xmlns:avaloniaEdit="https://github.com/avaloniaui/avaloniaedit"
              mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="720"
              x:Class="UTerminal.Views.MainView"
              x:DataType="vm:MainViewModel"
@@ -276,11 +278,20 @@
         
         <!-- 시리얼 데이터 뷰 -->
         <Border Grid.Row="2" BorderBrush="Black" BorderThickness="2" CornerRadius="8" Padding="5">
-            <TextBox Text="{Binding ReceivedData}" 
-                     AcceptsReturn="True"
-                     IsReadOnly="True"
-                     CaretIndex="{Binding DataScrollPos}"
-                     BorderThickness="0"/>
+            <avaloniaEdit:TextEditor IsReadOnly="True"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     VerticalScrollBarVisibility="Visible"
+                                     FontSize="14"
+                                     FontWeight="Light">
+                
+                <Interaction.Behaviors>
+                    <behaviors:DocumentTextBindingBehavior Text="{Binding ReceivedData, Mode=OneWay}" AutoScrollToEnd="True"/>
+                </Interaction.Behaviors>
+                
+                <avaloniaEdit:TextEditor.Options>
+                    <avaloniaEdit:TextEditorOptions AllowScrollBelowDocument="False"/>
+                </avaloniaEdit:TextEditor.Options>
+            </avaloniaEdit:TextEditor>
         </Border>
         <!-- 시리얼 데이터 뷰 -->
         
