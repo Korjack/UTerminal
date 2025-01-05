@@ -7,7 +7,7 @@ using ReactiveUI;
 namespace UTerminal.Models;
 
 /// <summary>
-/// Baudrate 기본 설정값
+/// Baudrate Default Enum
 /// </summary>
 public enum BaudRateType
 {
@@ -28,7 +28,7 @@ public enum BaudRateType
 }
 
 /// <summary>
-/// Parity 기본 설정값
+/// Parity Default Enum
 /// </summary>
 public enum ParityType
 {
@@ -40,7 +40,7 @@ public enum ParityType
 }
 
 /// <summary>
-/// DataBits 기본 설정
+/// DataBits Default Enum
 /// </summary>
 public enum DataBitsType
 {
@@ -50,47 +50,39 @@ public enum DataBitsType
     [Description("8")] Bits8 = 8
 }
 
+/// <summary>
+/// StopBits Default Enum
+/// </summary>
 public enum StopBitsType
 {
     [Description("1")] Bits1 = StopBits.One,
-    [Description("1.5")] Bits1_5 = StopBits.OnePointFive,
+    [Description("1.5")] Bits1Point5 = StopBits.OnePointFive,
     [Description("2")] Bits2 = StopBits.Two
 }
 
+/// <summary>
+/// Serial Encoding Types
+/// </summary>
+public enum EncodingBytes
+{
+    [Description("ASCII")] ASCII = 0,
+    [Description("HEX")] HEX = 1
+}
+
+/// <summary>
+/// Serial Read Type
+/// </summary>
+public enum ReadMode
+{
+    NewLine,            // 줄바꿈 기준
+    STX_ETX,            // STX/ETX (0x02/0x03) 기준
+}
 
 public class SerialSettings : ReactiveObject
 {
+    #region ComPort Settings
+
     public string PortPath { get; set; } = string.Empty;
-
-    private BaudRateType _baudRate = BaudRateType.Baud9600;
-    public BaudRateType BaudRate
-    {
-        get => _baudRate;
-        set => this.RaiseAndSetIfChanged(ref _baudRate, value);
-    }
-
-    private ParityType _parity = ParityType.ParityNone;
-    public ParityType Parity
-    {
-        get => _parity;
-        set => this.RaiseAndSetIfChanged(ref _parity, value);
-    }
-
-    private DataBitsType _dataBits = DataBitsType.Bits8;
-    public DataBitsType DataBits
-    {
-        get => _dataBits;
-        set => this.RaiseAndSetIfChanged(ref _dataBits, value);
-    }
-
-    private StopBitsType _stopBits = StopBitsType.Bits1;
-    public StopBitsType StopBits
-    {
-        get => _stopBits; 
-        set => this.RaiseAndSetIfChanged(ref _stopBits, value);
-    }
-    
-
     public ObservableCollection<OptionRadioItem> RadioComPortItems { get; } =
     [
         new() { Text = "1", Value = 1, IsEnabled = true, IsSelected = true },
@@ -104,9 +96,49 @@ public class SerialSettings : ReactiveObject
         new() { Text = "9", Value = 9, IsEnabled = false },
         new() { Text = "10", Value = 10, IsEnabled = false }
     ];
+
+    #endregion
+    
+    #region Fields
+
+    private BaudRateType _baudRate = BaudRateType.Baud9600;
+    private ParityType _parity = ParityType.ParityNone;
+    private DataBitsType _dataBits = DataBitsType.Bits8;
+    private StopBitsType _stopBits = StopBitsType.Bits1;
+
+    #endregion
+    
+    #region Properties
+    
+    public BaudRateType BaudRate
+    {
+        get => _baudRate;
+        set => this.RaiseAndSetIfChanged(ref _baudRate, value);
+    }
+    
+    public ParityType Parity
+    {
+        get => _parity;
+        set => this.RaiseAndSetIfChanged(ref _parity, value);
+    }
+    
+    public DataBitsType DataBits
+    {
+        get => _dataBits;
+        set => this.RaiseAndSetIfChanged(ref _dataBits, value);
+    }
+    
+    public StopBitsType StopBits
+    {
+        get => _stopBits; 
+        set => this.RaiseAndSetIfChanged(ref _stopBits, value);
+    }
+    
+    #endregion
 }
 
-public class OptionRadioItem : INotifyPropertyChanged
+
+public sealed class OptionRadioItem : INotifyPropertyChanged
 {
     private string? _text;
     private int _value;
@@ -167,12 +199,13 @@ public class OptionRadioItem : INotifyPropertyChanged
         }
     }
 
+    
     public override string ToString()
     {
         return $"Text: {Text} / Value: {Value} / IsSelected: {IsSelected} / IsEnabled: {IsEnabled}";
     }
-    
-    protected virtual void OnPropertyChanged(string propertyName)
+
+    private void OnPropertyChanged(string propertyName)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }

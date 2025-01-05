@@ -1,20 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
-using System.IO.Ports;
-using System.Linq;
-using System.Reactive.Concurrency;
 using System.Reactive.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data;
-using Avalonia.ReactiveUI;
 using ReactiveUI;
 using UTerminal.Models;
 
@@ -22,93 +13,85 @@ namespace UTerminal.ViewModels;
 
 public class MainViewModel : ViewModelBase
 {
-    #region 변수 영역
-
-    #region Init Serial Device
+    public ICommand QuitCommand { get; private set; }
     
-    private readonly SerialDevice _serialDevice;
+    public MainViewModel()
+    {
+        QuitCommand = ReactiveCommand.Create(QuitProgram);
+        
+        var setting = InitializeSerialSettings();
+        _serialDevice = InitializeSerialDevice(setting);
+        InitializeSerialDataStream();
+        InitializeSerialCommands();
+    }
+    
+    /// <summary>
+    /// Quit Program
+    /// </summary>
+    private void QuitProgram()
+    {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
+        {
+            desktopLifetime.Shutdown();
+        }
+    }
+    
+    
+    #region Serial
+    
+    #region Serial Setting
+    
+    private readonly SerialDevice _serialDevice;        // Init Serial Device
     public SerialSettings SerialSettings => _serialDevice.SerialSettings;
     
-    // 시리얼 데이터 바인딩 변수
-    private string _receivedData = string.Empty;
-    public string ReceivedData
-    {
-        get => _receivedData;
-        private set => this.RaiseAndSetIfChanged(ref _receivedData, value);
-    }
+    public ObservableCollection<OptionRadioItem> DefaultComPortList { get; private set; } = null!;
+    public static Array BaudRatesOption => Enum.GetValues(typeof(BaudRateType));
+    public static Array ParityOption => Enum.GetValues(typeof(ParityType));
+    public static Array DataBitsOption => Enum.GetValues(typeof(DataBitsType));
+    public static Array StopBitsOption => Enum.GetValues(typeof(StopBitsType));
+    
+    #endregion
 
-    // 시리얼 연결 여부 바인딩 변수
+    #region Fields
+
+    private string _serialStringData = string.Empty;
     private bool _isConnected;
+    private double _dataRate;
+    private int _messageCount = 0;
+    private readonly Stopwatch _hzStopwatch = new();
+    
+    private readonly SerialStringManager _serialStringManager = new(1000);
+
+    #endregion
+    
+    #region Properties
+
+    public string SerialStringData
+    {
+        get => _serialStringData;
+        private set => this.RaiseAndSetIfChanged(ref _serialStringData, value);
+    }
+    
     public bool IsConnected
     {
         get => _isConnected;
         private set => this.RaiseAndSetIfChanged(ref _isConnected, value);
     }
     
-    // 시리얼 데이터 뷰어 스트링
-    private readonly StringBuilder _textBuilder = new();
-    
-    // Hz를 계산하여 바인딩할 속성
-    private double _dataRate;
     public double DataRate
     {
         get => _dataRate;
         private set => this.RaiseAndSetIfChanged(ref _dataRate, value);
     }
-    private int _messageCount = 0;
-    
-    #endregion
-    
-    
-    #region Init Default Value
-    
-    public ObservableCollection<OptionRadioItem> DefaultComPortList { get; private set; }
-    public Array BaudRatesOption => Enum.GetValues(typeof(BaudRateType));
-    public Array ParitysOption => Enum.GetValues(typeof(ParityType));
-    public Array DataBitsOption => Enum.GetValues(typeof(DataBitsType));
-    public Array StopBitsOption => Enum.GetValues(typeof(StopBitsType));
-    
-    #endregion
-    
-    
-    #region Init Command
-
-    #region 기본메뉴 커맨드
-
-    public ICommand QuitCommand { get; set; }
-    public ICommand ReScanCommand { get; set; }
-    public ICommand ConnectCommand { get; set; }
-
-    #endregion
-
-    #region 옵션 설정 커맨드
-
-    public ICommand ComPortRadioChangedCommand { get; private set; }        // 포트 연결
-    public ICommand SerialSettingChangedCommand { get; private set; }       // 시리얼 설정 라디오 버튼 변경 커멘드
 
     #endregion
     
-    #endregion
-    
-    private readonly Stopwatch _stopwatch = new();
-
-    #endregion
-    
-
-    #region 생성 및 초기화
-
-    public MainViewModel()
-    {
-        var setting = InitializeSerialSettings();
-        _serialDevice = InitializeSerialDevice(setting);
-        InitializeSerialDataStream();
-        InitializeCommands();
-    }
+    #region Initialize Method
     
     /// <summary>
-    /// 시리얼 기본 설정값을 초기화 합니다.
+    /// Init Serial Setting
     /// </summary>
-    /// <returns><see cref="SerialSettings"/>을 반환합니다.</returns>
+    /// <returns><see cref="SerialSettings"/></returns>
     private SerialSettings InitializeSerialSettings()
     {
         var settings = new SerialSettings();
@@ -141,60 +124,59 @@ public class MainViewModel : ViewModelBase
         var serialDataStream = Observable.FromEventPattern<EventHandler<SerialMessage>, SerialMessage>(
                 h => _serialDevice.MessageReceived += h,
                 h => _serialDevice.MessageReceived -= h)
-            .Select(x => x.EventArgs);
-
+            .Select(x => x.EventArgs)
+            .Do(UpdateDataRate);
+        
         serialDataStream
-            .Buffer(TimeSpan.FromMilliseconds(100))
+            .Buffer(TimeSpan.FromMilliseconds(16.67))
             .Where(messages => messages.Count > 0)
             .ObserveOn(RxApp.TaskpoolScheduler)
-            .Do(UpdateDataRate)
             .Select(ProcessMessages)
             .ObserveOn(RxApp.MainThreadScheduler)
-            .Subscribe(UpdateUI);
+            .Subscribe(UpdateUi);
     }
     
     /// <summary>
     /// 사용자 명령에 대한 처리를 초기화 합니다.
     /// </summary>
-    private void InitializeCommands()
+    private void InitializeSerialCommands()
     {
         // 기본메뉴 커맨드
-        QuitCommand = ReactiveCommand.Create(QuitProgram);
-        ReScanCommand = ReactiveCommand.Create(ReScanSerialPort);
         ConnectCommand = ReactiveCommand.Create(ConnectSerialPort);
+        ReScanCommand = ReactiveCommand.Create(ReScanSerialPort);
         
         // 옵션 설정 커맨드
         ComPortRadioChangedCommand = ReactiveCommand.Create<OptionRadioItem>(ComPortRadio_Clicked);
         SerialSettingChangedCommand = ReactiveCommand.Create<object>(SerialSettingRadio_Clicked);
+        EncodingBytesChangedCommand = ReactiveCommand.Create<string>(EncodingByteRadio_Clicked);
     }
-
 
     #endregion
     
+    #region Commands
     
-    #region 커맨드 함수 영역
+    public ICommand ConnectCommand { get; set; } = null!;
+    public ICommand ReScanCommand { get; set; } = null!;
     
-    /// <summary>
-    /// 프로그램을 종료합니다.
-    /// </summary>
-    private void QuitProgram()
-    {
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
-        {
-            desktopLifetime.Shutdown();
-        }
-    }
+    public ICommand ComPortRadioChangedCommand { get; private set; } = null!;
+    public ICommand SerialSettingChangedCommand { get; private set; } = null!;
+    public ICommand EncodingBytesChangedCommand { get; private set; } = null!;
 
+    #endregion
+    
+    #region Command Method
+    
     /// <summary>
-    /// 컴퓨터의 시리얼 포트 목록을 가져오고 반영합니다.
+    /// Scan Serial Port Path
     /// </summary>
     private void ReScanSerialPort()
     {
         _serialDevice.GetPortPaths();
     }
     
+    
     /// <summary>
-    /// 시리얼 연결
+    /// Connect Serial
     /// </summary>
     private void ConnectSerialPort()
     {
@@ -207,17 +189,32 @@ public class MainViewModel : ViewModelBase
             _serialDevice.Disconnect();
             IsConnected = _serialDevice.IsConnected;
         }
-        
-        Debug.WriteLine($"Serial Connect Status: {IsConnected}");
     }
     
     
-    
+    /// <summary>
+    /// Set Serial Port
+    /// </summary>
+    /// <param name="item">Selected Serial Port Radio Item</param>
     private void ComPortRadio_Clicked(OptionRadioItem item)
     {
         _serialDevice.SetPortPath(_serialDevice.SerialPortList[item.Value]);
     }
 
+    
+    /// <summary>
+    /// Change Serial Device Settings.
+    /// </summary>
+    /// <remarks>
+    /// Divide based on the following type:
+    /// <list type="bullet">
+    ///     <item><description><see cref="BaudRateType"/></description></item>
+    ///     <item><description><see cref="ParityType"/></description></item>
+    ///     <item><description><see cref="DataBitsType"/></description></item>
+    ///     <item><description><see cref="StopBitsType"/></description></item>
+    /// </list>
+    /// </remarks>
+    /// <param name="setting"></param>
     private void SerialSettingRadio_Clicked(object? setting)
     {
         switch (setting)
@@ -241,62 +238,83 @@ public class MainViewModel : ViewModelBase
         
         this.RaisePropertyChanged(nameof(SerialSettings));
     }
+
+    
+    /// <summary>
+    /// Convert Serial Buffer Text Type
+    /// </summary>
+    /// <param name="stringMode">Convert Type</param>
+    private void EncodingByteRadio_Clicked(string? stringMode)
+    {
+        switch (stringMode)
+        {
+            case "ASCII":
+                _serialStringManager.ChangeFormat(EncodingBytes.ASCII);
+                break;
+            case "HEX":
+                _serialStringManager.ChangeFormat(EncodingBytes.HEX);
+                break;
+        }
+
+        // If not connected, Update serial string data
+        if (!IsConnected)
+        {
+            SerialStringData = _serialStringManager.GetCurrentString();
+        }
+    }
     
     #endregion
-
-
-    #region 시리얼 데이터 스트림 처리 함수
-
+    
+    #region Serial DataStream Function
+    
     /// <summary>
-    /// 메시지 데이터를 처리합니다.
+    /// Process the message collected during the buffer
     /// </summary>
-    /// <param name="messages"><see cref="IList{SerialMessage}"/> 메시지 리스트</param>
-    /// <returns><see cref="StringBuilder"/>의 ToString 결과</returns>
+    /// <param name="messages"><see cref="IList{SerialMessage}"/> Message List</param>
+    /// <returns>Combined <see cref="string"/> Output</returns>
     private string ProcessMessages(IList<SerialMessage> messages)
     {
         foreach (var message in messages)
         {
-            string s = Encoding.ASCII.GetString(message.Data) + Environment.NewLine;
-            _textBuilder.Append(s);
-            
-            if (_textBuilder.Length > 10000)
-            {
-                _textBuilder.Remove(0, s.Length);
-            }
+            _serialStringManager.Add(message);
         }
         
-        return _textBuilder.ToString();
-    }
-
-    /// <summary>
-    /// UI를 업데이트합니다.
-    /// </summary>
-    /// <param name="result">최종 Text 결과물 업데이트</param>
-    private void UpdateUI(string result)
-    {
-        ReceivedData = result;
+        return _serialStringManager.GetCurrentString();
     }
     
+    
     /// <summary>
-    /// 메시지 수신 속도 업데이트
+    /// Update UI
     /// </summary>
-    /// <param name="messages"><see cref="IList{SerialMessage}"/> 메시지 목록</param>
-    private void UpdateDataRate(IList<SerialMessage> messages)
+    /// <param name="result">Show <see cref="string"/> Data</param>
+    private void UpdateUi(string result)
     {
-        _messageCount += messages.Count;
+        SerialStringData = result;
+    }
+    
+    
+    /// <summary>
+    /// Message Received Rate Updater
+    /// </summary>
+    /// <param name="message"><see cref="SerialMessage"/> Message Type</param>
+    private void UpdateDataRate(SerialMessage message)
+    {
+        _messageCount++;
 
-        if (!_stopwatch.IsRunning)
+        if (!_hzStopwatch.IsRunning)
         {
-            _stopwatch.Start();
+            _hzStopwatch.Start();
         }
-        else if (_stopwatch.ElapsedMilliseconds >= 1000)
+        else if (_hzStopwatch.ElapsedMilliseconds >= 1000)
         {
-            DataRate = _messageCount / (_stopwatch.ElapsedMilliseconds / 1000.0);
+            DataRate = _messageCount / (_hzStopwatch.ElapsedMilliseconds / 1000.0);
             _messageCount = 0;
-            _stopwatch.Restart();
+            _hzStopwatch.Restart();
         }
     }
 
+    #endregion
+    
     #endregion
     
 }

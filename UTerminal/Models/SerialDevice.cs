@@ -1,73 +1,87 @@
 using System;
-using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Ports;
 using System.Linq;
-using System.Text;
+using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
-using Microsoft.VisualBasic;
 
 namespace UTerminal.Models;
 
-
 public class SerialDevice : IDisposable
 {
-    
-    #region 변수 목록
-
-    #region 시리얼 포트 변수
+    #region Fields
 
     private SerialPort? _serialPort;
     private readonly SerialSettings _settings;
-    public SerialSettings SerialSettings => _settings;
-    
-    public bool IsConnected => _serialPort?.IsOpen ?? false;        // 시리얼 연결 여부
 
-    public string[] SerialPortList { get; private set; } = [];            // 시리얼 연결 가능 목록
+    #region Constants
+
+    private const int NEWLINE_CHAR = 0x0A;
+    private const int CARRIAGE_RETURN = 0x0D;
 
     #endregion
-
-    #region 데이터 처리 변수
     
+    #region Data Process
+
     public event EventHandler<SerialMessage>? MessageReceived;      // 이벤트 연결 핸들러
-    private CancellationTokenSource _cancellationTokenSource = new ();
-    
-    private readonly ConcurrentQueue<SerialMessage> _messages = new();      // 메시지 처리 큐
-    private readonly List<byte> _bufferList = [];                        // 수신된 누적 바이트 버퍼 리스트
-    
-    
-    /// <summary>
-    /// 시리얼 읽기 모드 설정
-    /// </summary>
     private readonly ReadMode _currentMode = ReadMode.NewLine;
-    public enum ReadMode
+    private readonly List<byte> _bufferList = [];                   // 수신된 누적 바이트 버퍼 리스트
+    
+    // 메시치 처리 채널
+    private readonly Channel<SerialMessage> _messageChannel = Channel.CreateUnbounded<SerialMessage>(new UnboundedChannelOptions
     {
-        NewLine,            // 줄바꿈 기준
-        STX_ETX,            // STX/ETX (0x02/0x03) 기준
-    }
+        SingleReader = true,
+        SingleWriter = true
+    });
+
+    #endregion
+    
+    #region Tokens
+
+    private CancellationTokenSource _serialTokenSource = new ();
+    private CancellationTokenSource _channelTokenSource = new();
+
+    #endregion
     
     #endregion
 
-    #endregion
+    #region Properties
 
+    public SerialSettings SerialSettings => _settings;
+    public bool IsConnected => _serialPort?.IsOpen ?? false;        // 시리얼 연결 여부
+    public string[] SerialPortList { get; private set; } = [];      // 시리얼 연결 가능 목록
+
+    #endregion
+    
+    #region Initialize & Dipose
 
     public SerialDevice()
     {
         _settings = new SerialSettings();
     }
+    
     public SerialDevice(SerialSettings settings)
     {
         _settings = settings;
     }
     
+    public void Dispose()
+    {
+        Disconnect();
+        _serialPort?.Dispose();
+    }
+
+    #endregion
     
+    #region SerialConnect
+
     /// <summary>
-    /// 시리얼을 연결합니다.
+    /// Connect Serial
     /// </summary>
-    /// <returns><see cref="bool"/> 연결 상태</returns>
+    /// <returns>Return <see cref="bool"/> type connect status</returns>
     public bool Connect()
     {
         if (IsConnected) return false;
@@ -82,22 +96,21 @@ public class SerialDevice : IDisposable
                 (StopBits)_settings.StopBits
             );
 
-            if (_cancellationTokenSource.IsCancellationRequested)
-            {
-                _cancellationTokenSource = new CancellationTokenSource();    // 토큰 초기화
-            }
+            if (_serialTokenSource.IsCancellationRequested) _serialTokenSource = new CancellationTokenSource();
+            if (_channelTokenSource.IsCancellationRequested) _channelTokenSource = new CancellationTokenSource();
             
             _serialPort.Open();
-            _ = ProcessMessageAsync(_cancellationTokenSource.Token);            // 큐 메시지 처리 비동기 함수
-            _ = SerialPort_DataReceivedAsync(_cancellationTokenSource.Token);   // 시리얼 데이터 수신 처리 함수
 
+            Task.Run(async () => await ProcessMessageAsync(_channelTokenSource, _serialTokenSource.Token));
+            Task.Run(async () => await SerialPort_DataReceivedAsync(_serialTokenSource.Token));
+            
             return true;
         }
         catch (Exception e)
         {
             _ = OnMessageReceived(new SerialMessage 
             { 
-                Text = e.Message,
+                ErrorText = e.Message,
                 Timestamp = DateTime.Now,
                 Type = SerialMessage.MessageType.Error
             });
@@ -106,20 +119,23 @@ public class SerialDevice : IDisposable
     }
 
     /// <summary>
-    /// 시리얼 연결을 해제합니다.
+    /// Disconnect Serial
     /// </summary>
     public void Disconnect()
     {
         if (_serialPort?.IsOpen == true)
         {
-            _cancellationTokenSource.Cancel();
             _serialPort.Close();
+            _serialTokenSource.Cancel();
         }
     }
 
-    
+    #endregion
+
+    #region Serial Data Process
+
     /// <summary>
-    /// 실제 데이터를 받아서 처리하는 부분
+    /// Process serial data asynchronously.
     /// </summary>
     private async Task SerialPort_DataReceivedAsync(CancellationToken token)
     {
@@ -139,24 +155,26 @@ public class SerialDevice : IDisposable
                     foreach (var currentByte in buffer)
                     {
                         // 줄바꿈 여부 확인
-                        if (currentByte == 0x0A)
+                        if (currentByte == NEWLINE_CHAR)
                         {
-                            if (_bufferList.Count > 0 && _bufferList[^1] == 0x0D)
+                            if (_bufferList.Count > 0 && _bufferList[^1] == CARRIAGE_RETURN)
                             {
                                 _bufferList.RemoveAt(_bufferList.Count - 1);
                             }
                     
-                            byte[] lineBytes = _bufferList.ToArray();
+                            byte[] lineBytes = new byte[_bufferList.Count];
+                            CollectionsMarshal.AsSpan(_bufferList).CopyTo(lineBytes);
+                            
                             _bufferList.Clear();
-                    
-                            // 큐에 메시지 데이터 담기
-                            _messages.Enqueue(new SerialMessage
+                            
+                            // 채널에 메시지 쓰기
+                            await _messageChannel.Writer.WriteAsync(new SerialMessage
                             {
                                 Data = lineBytes,
                                 DataSize = lineBytes.Length,
                                 Timestamp = DateTime.Now,
                                 Type = SerialMessage.MessageType.Received
-                            });
+                            }, token);
                         }
                         else
                         {
@@ -176,10 +194,62 @@ public class SerialDevice : IDisposable
             Debug.WriteLine($"Error reading from serial port: {ex.Message}");
         }
     }
-    
+
+    /// <summary>
+    /// Asynchronously processes message data periodically when connecting to a serial connection.
+    /// </summary>
+    private async Task ProcessMessageAsync(CancellationTokenSource channelTokenSource, CancellationToken serialToken)
+    {
+        var queueToken = channelTokenSource.Token;
+        var reader = _messageChannel.Reader;
+
+        try 
+        {
+            while (!queueToken.IsCancellationRequested)
+            {
+                var message = await reader.ReadAsync(queueToken);
+                await OnMessageReceived(message);
+
+                if (serialToken.IsCancellationRequested && reader.Count == 0)
+                {
+                    await channelTokenSource.CancelAsync();
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // 정상적인 종료 처리
+        }
+    }
     
     /// <summary>
-    /// 설정에 있는 시리얼 경로 정보를 업데이트합니다.
+    /// Calls a function attached to an event asynchronously.
+    /// </summary>
+    /// <param name="message"><see cref="SerialMessage"/></param>
+    private Task OnMessageReceived(SerialMessage message)
+    {
+        var handler = MessageReceived;
+        if (handler != null)
+        {
+            var delegates = handler.GetInvocationList()
+                .Cast<EventHandler<SerialMessage>>();
+
+            // Fire and forget 방식으로 실행
+            foreach (var d in delegates)
+            {
+                _ = Task.Run(() => d(this, message));
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+    
+    #endregion
+    
+    #region Public Method
+    
+    /// <summary>
+    /// Update the serial path in Settings.
     /// </summary>
     public void GetPortPaths()
     {
@@ -204,56 +274,14 @@ public class SerialDevice : IDisposable
     }
 
     /// <summary>
-    /// 포트 경로를 설정합니다.
+    /// Set ComPort path
     /// </summary>
-    /// <param name="port">시리얼 포트 경로</param>
+    /// <param name="port"><see cref="string"/> port name</param>
     public void SetPortPath(string port)
     {
         _settings.PortPath = port;
     }
-
-
-    /// <summary>
-    /// 시리얼 연결시 주기적으로 메시지 데이터를 비동기로 처리합니다.
-    /// </summary>
-    /// <param name="token">Token</param>
-    private async Task ProcessMessageAsync(CancellationToken token)
-    {
-        while (!token.IsCancellationRequested)
-        {
-            if (_messages.TryDequeue(out var message))
-            {
-                await OnMessageReceived(message);
-            }
-            else
-            {
-                await Task.Delay(50, token);
-            }
-        }
-    }
     
-    /// <summary>
-    /// 이벤트에 연결된 함수에 비동기로 호출합니다.
-    /// </summary>
-    /// <param name="message"><see cref="SerialMessage"/> 메시지</param>
-    private async Task OnMessageReceived(SerialMessage message)
-    {
-        var handler = MessageReceived;
-        if (handler != null)
-        {
-            var delegates = handler.GetInvocationList()
-                .Cast<EventHandler<SerialMessage>>();
-
-            var tasks = delegates.Select(d => Task.Run(() => d(this, message)));
-            await Task.WhenAll(tasks);
-        }
-    }
-
+    #endregion
     
-    public void Dispose()
-    {
-        Disconnect();
-        _cancellationTokenSource.Cancel();
-        _serialPort?.Dispose();
-    }
 }
