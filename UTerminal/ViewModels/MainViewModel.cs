@@ -7,9 +7,11 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using ReactiveUI;
 using UTerminal.Models;
+using UTerminal.Views;
 
 namespace UTerminal.ViewModels;
 
@@ -63,6 +65,7 @@ public class MainViewModel : ViewModelBase
     private readonly Stopwatch _hzStopwatch = new();
     
     private readonly SerialStringManager _serialStringManager = new(1000);
+    public delegate Task SendSerialDataDelegate(string data);
 
     #endregion
     
@@ -151,7 +154,9 @@ public class MainViewModel : ViewModelBase
         ComPortRadioChangedCommand = ReactiveCommand.Create<OptionRadioItem>(ComPortRadio_Clicked);
         SerialSettingChangedCommand = ReactiveCommand.Create<object>(SerialSettingRadio_Clicked);
         EncodingBytesChangedCommand = ReactiveCommand.Create<string>(EncodingByteRadio_Clicked);
+        
         SendSerialDataCommand = ReactiveCommand.CreateFromTask<string>(SendSerialDataAsync_Clicked);
+        OpenMacroWindowCommand = ReactiveCommand.Create(OpenMacroWindowAsync_Clicked);
     }
 
     #endregion
@@ -165,6 +170,7 @@ public class MainViewModel : ViewModelBase
     public ICommand SerialSettingChangedCommand { get; private set; } = null!;
     public ICommand EncodingBytesChangedCommand { get; private set; } = null!;
     public ICommand SendSerialDataCommand { get; private set; } = null!;
+    public ICommand OpenMacroWindowCommand { get; private set; } = null!;
 
     #endregion
     
@@ -283,6 +289,21 @@ public class MainViewModel : ViewModelBase
             // Serial Write Success
         }
     }
+
+
+    private void OpenMacroWindowAsync_Clicked()
+    {
+        var macroWindow = new MacroView
+        {
+            DataContext = new MacroViewModel(SendSerialDataAsync_Clicked)
+        };
+
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
+        {
+            macroWindow.Show(desktopLifetime.MainWindow!);
+        }
+    }
+    
     
     #endregion
     

@@ -273,6 +273,8 @@
         
         <!-- 시리얼 데이터 뷰 옵션 -->
         <StackPanel Grid.Row="1">
+            
+            <!-- 인코딩 타입 선택 -->
             <StackPanel Orientation="Horizontal">
                 <RadioButton Content="ASCII"
                              GroupName="EncodingBytesGroup"
@@ -303,6 +305,8 @@
                     </Interaction.Behaviors>
                 </RadioButton>
             </StackPanel>
+            <!-- 인코딩 타입 선택 -->
+            
         </StackPanel>
         <!-- 시리얼 데이터 뷰 옵션 -->
         
@@ -325,10 +329,12 @@
         </Border>
         <!-- 시리얼 데이터 뷰 -->
         
+        <!-- 데이터 송신 -->
         <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="0.05*"/>
+                <ColumnDefinition Width="0.06*"/>
             </Grid.ColumnDefinitions>
             <TextBox Grid.Column="0" x:Name="SerialWriteTextBox"
                      VerticalContentAlignment="Center"
@@ -344,7 +350,11 @@
             <Button Grid.Column="1" Content="Send" 
                     Command="{Binding SendSerialDataCommand}"
                     CommandParameter="{Binding #SerialWriteTextBox.Text}"/>
+            <Button Grid.Column="2" Content="Macro"
+                    Command="{Binding OpenMacroWindowCommand}"/>
         </Grid>
+        <!-- 데이터 송신 -->
+        
         
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
             <!-- 데이터 전송 속도 -->
