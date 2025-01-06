@@ -66,7 +66,8 @@ public enum StopBitsType
 public enum EncodingBytes
 {
     [Description("ASCII")] ASCII = 0,
-    [Description("HEX")] HEX = 1
+    [Description("HEX")] HEX = 1,
+    [Description("UTF8")] UTF8 = 2
 }
 
 /// <summary>

@@ -281,6 +281,15 @@ public class SerialDevice : IDisposable
     {
         _settings.PortPath = port;
     }
+
+    public async Task<bool> WriteAsync(byte[] data)
+    {
+        if(_serialPort == null) return false;
+        
+        await _serialPort.BaseStream.WriteAsync(data, _serialTokenSource.Token);
+
+        return true;
+    }
     
     #endregion
     

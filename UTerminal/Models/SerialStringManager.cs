@@ -132,6 +132,7 @@ public class SerialStringManager
         {
             EncodingBytes.ASCII => StringFromBufferOptimized(data, Encoding.ASCII),
             EncodingBytes.HEX => HexFromBufferOptimized(data),
+            EncodingBytes.UTF8 => StringFromBufferOptimized(data, Encoding.UTF8),
             _ => throw new ArgumentException("Unsupported format")
         };
     }

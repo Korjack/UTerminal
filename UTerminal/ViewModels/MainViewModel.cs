@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reactive.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -149,6 +151,7 @@ public class MainViewModel : ViewModelBase
         ComPortRadioChangedCommand = ReactiveCommand.Create<OptionRadioItem>(ComPortRadio_Clicked);
         SerialSettingChangedCommand = ReactiveCommand.Create<object>(SerialSettingRadio_Clicked);
         EncodingBytesChangedCommand = ReactiveCommand.Create<string>(EncodingByteRadio_Clicked);
+        SendSerialDataCommand = ReactiveCommand.CreateFromTask<string>(SendSerialDataAsync_Clicked);
     }
 
     #endregion
@@ -161,6 +164,7 @@ public class MainViewModel : ViewModelBase
     public ICommand ComPortRadioChangedCommand { get; private set; } = null!;
     public ICommand SerialSettingChangedCommand { get; private set; } = null!;
     public ICommand EncodingBytesChangedCommand { get; private set; } = null!;
+    public ICommand SendSerialDataCommand { get; private set; } = null!;
 
     #endregion
     
@@ -254,12 +258,29 @@ public class MainViewModel : ViewModelBase
             case "HEX":
                 _serialStringManager.ChangeFormat(EncodingBytes.HEX);
                 break;
+            case "UTF8":
+                _serialStringManager.ChangeFormat(EncodingBytes.UTF8);
+                break;
         }
 
-        // If not connected, Update serial string data
-        if (!IsConnected)
+        SerialStringData = _serialStringManager.GetCurrentString();
+    }
+    
+    
+    /// <summary>
+    /// Send Serial Data 
+    /// </summary>
+    /// 
+    private async Task SendSerialDataAsync_Clicked(string data)
+    {
+        if(string.IsNullOrEmpty(data)) return;
+        if (!IsConnected) return;
+        
+        //TODO: String으로 들어온 Hex데이터를 처리해서 Byte로 넘길 수 있도록 수정 필요
+        var byteData = Encoding.UTF8.GetBytes(data);
+        if (await _serialDevice.WriteAsync(byteData))
         {
-            SerialStringData = _serialStringManager.GetCurrentString();
+            // Serial Write Success
         }
     }
     

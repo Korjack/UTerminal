@@ -25,12 +25,13 @@
         <cv:EnumDescriptionConverter x:Key="EnumDescriptionConverter"/>
     </UserControl.Resources>
     
-    <Grid RowSpan="5" ShowGridLines="True">
+    <Grid RowSpan="10" ShowGridLines="True">
         <Grid.RowDefinitions>
             <RowDefinition Height="0.4*"/>
             <RowDefinition Height="0.1*"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="0.05*"/>
+            <RowDefinition Height="0.1*"/>
+            <RowDefinition Height="0.04*"/>
         </Grid.RowDefinitions>
         <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Stretch" Spacing="10" Height="160">
             <!-- 기본 메뉴 뷰 -->
@@ -292,6 +293,15 @@
                         </EventTriggerBehavior>
                     </Interaction.Behaviors>
                 </RadioButton>
+                <RadioButton Content="UTF-8"
+                             GroupName="EncodingBytesGroup">
+                    <Interaction.Behaviors>
+                        <EventTriggerBehavior EventName="Click">
+                            <InvokeCommandAction Command="{Binding EncodingBytesChangedCommand}"
+                                                 CommandParameter="UTF8"/>
+                        </EventTriggerBehavior>
+                    </Interaction.Behaviors>
+                </RadioButton>
             </StackPanel>
         </StackPanel>
         <!-- 시리얼 데이터 뷰 옵션 -->
@@ -315,7 +325,28 @@
         </Border>
         <!-- 시리얼 데이터 뷰 -->
         
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="3">
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="0.05*"/>
+            </Grid.ColumnDefinitions>
+            <TextBox Grid.Column="0" x:Name="SerialWriteTextBox"
+                     VerticalContentAlignment="Center"
+                     Margin="3"
+                     BorderThickness="2"
+                     Watermark="Write Serial Data">
+                <TextBox.KeyBindings>
+                    <KeyBinding Gesture="Enter" 
+                                Command="{Binding SendSerialDataCommand}"
+                                CommandParameter="{Binding #SerialWriteTextBox.Text}"/>
+                </TextBox.KeyBindings>
+            </TextBox>
+            <Button Grid.Column="1" Content="Send" 
+                    Command="{Binding SendSerialDataCommand}"
+                    CommandParameter="{Binding #SerialWriteTextBox.Text}"/>
+        </Grid>
+        
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
             <!-- 데이터 전송 속도 -->
             <TextBlock TextAlignment="Center" Text="{Binding DataRate, StringFormat='Data Rate: {0:N2} Hz'}"/>
             <!-- 데이터 전송 속도 -->
