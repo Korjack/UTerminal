@@ -21,13 +21,15 @@ public class SerialDevice : IDisposable
 
     private const int NEWLINE_CHAR = 0x0A;
     private const int CARRIAGE_RETURN = 0x0D;
+    private const int STX = 0x02;
+    private const int ETX = 0x03;
 
     #endregion
     
     #region Data Process
 
     public event EventHandler<SerialMessage>? MessageReceived;      // 이벤트 연결 핸들러
-    private readonly ReadMode _currentMode = ReadMode.NewLine;
+    private ReadMode _currentMode = ReadMode.NewLine;
     private readonly List<byte> _bufferList = [];                   // 수신된 누적 바이트 버퍼 리스트
     
     // 메시치 처리 채널
@@ -36,6 +38,8 @@ public class SerialDevice : IDisposable
         SingleReader = true,
         SingleWriter = true
     });
+
+    private bool _canBufferAdd = false;
 
     #endregion
     
@@ -53,6 +57,16 @@ public class SerialDevice : IDisposable
     public SerialSettings SerialSettings => _settings;
     public bool IsConnected => _serialPort?.IsOpen ?? false;        // 시리얼 연결 여부
     public string[] SerialPortList { get; private set; } = [];      // 시리얼 연결 가능 목록
+    
+    public ReadMode CurrentMode
+    {
+        get => _currentMode;
+        set
+        {
+            _bufferList.Clear();        // If Readmode changed, must be clear bufferlist
+            _currentMode = value;
+        }
+    }
 
     #endregion
     
@@ -151,35 +165,18 @@ public class SerialDevice : IDisposable
                     byte[] buffer = new byte[bufferSize];
                     await _serialPort.BaseStream.ReadExactlyAsync(buffer, 0, bufferSize, token);
 
-                    // 읽은 데이터를 처리합니다
-                    foreach (var currentByte in buffer)
+                    switch (_currentMode)
                     {
-                        // 줄바꿈 여부 확인
-                        if (currentByte == NEWLINE_CHAR)
-                        {
-                            if (_bufferList.Count > 0 && _bufferList[^1] == CARRIAGE_RETURN)
-                            {
-                                _bufferList.RemoveAt(_bufferList.Count - 1);
-                            }
-                    
-                            byte[] lineBytes = new byte[_bufferList.Count];
-                            CollectionsMarshal.AsSpan(_bufferList).CopyTo(lineBytes);
-                            
-                            _bufferList.Clear();
-                            
-                            // 채널에 메시지 쓰기
-                            await _messageChannel.Writer.WriteAsync(new SerialMessage
-                            {
-                                Data = lineBytes,
-                                DataSize = lineBytes.Length,
-                                Timestamp = DateTime.Now,
-                                Type = SerialMessage.MessageType.Received
-                            }, token);
-                        }
-                        else
-                        {
-                            _bufferList.Add(currentByte);
-                        }
+                        case ReadMode.NewLine:
+                            await ProcessDataNewLine(buffer, token);
+                            break;
+                        case ReadMode.STX_ETX:
+                            await ProcessDataStxEtx(buffer, token);
+                            break;
+                        case ReadMode.Custom:
+                            throw new NotImplementedException("Not support custom yet");
+                        default:
+                            throw new ArgumentOutOfRangeException();
                     }
                 }
             }
@@ -195,6 +192,100 @@ public class SerialDevice : IDisposable
         }
     }
 
+
+    /// <summary>
+    /// Function to process buffer at each newline 
+    /// </summary>
+    /// <param name="buffer"><see cref="byte"/>[] Buffer data</param>
+    /// <param name="token"><see cref="CancellationToken"/> When serial canceled, cancel it</param>
+    private async Task ProcessDataNewLine(byte[] buffer, CancellationToken token)
+    {
+        // 읽은 데이터를 처리합니다
+        foreach (var currentByte in buffer)
+        {
+            // 줄바꿈 여부 확인
+            if (currentByte == NEWLINE_CHAR)
+            {
+                if (_bufferList.Count > 0 && _bufferList[^1] == CARRIAGE_RETURN)
+                {
+                    _bufferList.RemoveAt(_bufferList.Count - 1);
+                }
+
+                byte[] lineBytes = GetBufferFromList();
+                            
+                // 채널에 메시지 쓰기
+                await _messageChannel.Writer.WriteAsync(new SerialMessage
+                {
+                    Data = lineBytes,
+                    DataSize = lineBytes.Length,
+                    Timestamp = DateTime.Now,
+                    Type = SerialMessage.MessageType.Received
+                }, token);
+            }
+            else
+            {
+                _bufferList.Add(currentByte);
+            }
+        }
+    }
+
+    
+    /// <summary>
+    /// Function to process buffer at each [STX ... ETX]
+    /// </summary>
+    /// <param name="buffer"><see cref="byte"/>[] Buffer data</param>
+    /// <param name="token"><see cref="CancellationToken"/> When serial canceled, cancel it</param>
+    private async Task ProcessDataStxEtx(byte[] buffer, CancellationToken token)
+    {
+        foreach (var currentByte in buffer)
+        {
+            switch (currentByte)
+            {
+                // Buffer contain STX and ETX.
+                case STX:
+                    _canBufferAdd = true;
+                    break;
+                case ETX:
+                {
+                    _canBufferAdd = false;
+                    _bufferList.Add(currentByte);
+                
+                    byte[] data = GetBufferFromList();
+                
+                    // 채널에 메시지 쓰기
+                    await _messageChannel.Writer.WriteAsync(new SerialMessage
+                    {
+                        Data = data,
+                        DataSize = data.Length,
+                        Timestamp = DateTime.Now,
+                        Type = SerialMessage.MessageType.Received
+                    }, token);
+                    break;
+                }
+            }
+
+            if (_canBufferAdd)
+            {
+                _bufferList.Add(currentByte);
+            }
+        }
+    }
+
+    
+    /// <summary>
+    /// Return <see cref="byte"/>[] from <see cref="List{Byte}"/> and Clear List
+    /// </summary>
+    /// <returns><see cref="byte"/>[]</returns>
+    private byte[] GetBufferFromList()
+    {
+        byte[] bytes = new byte[_bufferList.Count];
+        CollectionsMarshal.AsSpan(_bufferList).CopyTo(bytes);
+                
+        _bufferList.Clear();
+
+        return bytes;
+    }
+    
     /// <summary>
     /// Asynchronously processes message data periodically when connecting to a serial connection.
     /// </summary>

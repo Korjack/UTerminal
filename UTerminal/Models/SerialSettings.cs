@@ -77,6 +77,7 @@ public enum ReadMode
 {
     NewLine,            // 줄바꿈 기준
     STX_ETX,            // STX/ETX (0x02/0x03) 기준
+    Custom
 }
 
 public class SerialSettings : ReactiveObject

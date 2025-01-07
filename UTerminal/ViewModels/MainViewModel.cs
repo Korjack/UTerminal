@@ -157,6 +157,7 @@ public class MainViewModel : ViewModelBase
         
         SendSerialDataCommand = ReactiveCommand.CreateFromTask<string>(SendSerialDataAsync_Clicked);
         OpenMacroWindowCommand = ReactiveCommand.Create(OpenMacroWindowAsync_Clicked);
+        ReadTypeChangedCommand = ReactiveCommand.Create<string>(ReadTypeChanged_Clicked);
     }
 
     #endregion
@@ -171,6 +172,7 @@ public class MainViewModel : ViewModelBase
     public ICommand EncodingBytesChangedCommand { get; private set; } = null!;
     public ICommand SendSerialDataCommand { get; private set; } = null!;
     public ICommand OpenMacroWindowCommand { get; private set; } = null!;
+    public ICommand ReadTypeChangedCommand { get; private set; } = null!;
 
     #endregion
     
@@ -302,6 +304,22 @@ public class MainViewModel : ViewModelBase
         {
             macroWindow.Show(desktopLifetime.MainWindow!);
         }
+    }
+
+
+    /// <summary>
+    /// ReadType RadioButton changed
+    /// </summary>
+    /// <remarks><see cref="ReadMode"/></remarks>
+    /// <param name="type"><see cref="string"/></param>
+    private void ReadTypeChanged_Clicked(string type)
+    {
+        _serialDevice.CurrentMode = type switch
+        {
+            "NewLine" => ReadMode.NewLine,
+            "STX_ETX" => ReadMode.STX_ETX,
+            _ => _serialDevice.CurrentMode
+        };
     }
     
     
