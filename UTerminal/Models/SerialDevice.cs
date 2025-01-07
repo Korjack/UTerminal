@@ -174,7 +174,8 @@ public class SerialDevice : IDisposable
                             await ProcessDataStxEtx(buffer, token);
                             break;
                         case ReadMode.Custom:
-                            throw new NotImplementedException("Not support custom yet");
+                            await ProcessDataStxEtx(buffer, token, _settings.CustomSTX, _settings.CustomETX);
+                            break;
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
@@ -229,48 +230,47 @@ public class SerialDevice : IDisposable
         }
     }
 
-    
+
     /// <summary>
     /// Function to process buffer at each [STX ... ETX]
     /// </summary>
     /// <param name="buffer"><see cref="byte"/>[] Buffer data</param>
     /// <param name="token"><see cref="CancellationToken"/> When serial canceled, cancel it</param>
-    private async Task ProcessDataStxEtx(byte[] buffer, CancellationToken token)
+    /// <param name="stx">(<see cref="byte"/>)If need customize STX</param>
+    /// <param name="etx">(<see cref="byte"/>)If need customize ETX</param>
+    private async Task ProcessDataStxEtx(byte[] buffer, CancellationToken token, byte stx = STX, byte etx = ETX)
     {
         foreach (var currentByte in buffer)
         {
-            switch (currentByte)
+            // Buffer contain STX and ETX.
+            if (currentByte == stx)
             {
-                // Buffer contain STX and ETX.
-                case STX:
-                    _canBufferAdd = true;
-                    break;
-                case ETX:
+                _canBufferAdd = true;
+            }
+            else if(currentByte == etx)
+            {
+                _canBufferAdd = false;
+                _bufferList.Add(currentByte);
+                
+                byte[] data = GetBufferFromList();
+                
+                // Write message on channel
+                await _messageChannel.Writer.WriteAsync(new SerialMessage
                 {
-                    _canBufferAdd = false;
-                    _bufferList.Add(currentByte);
-                
-                    byte[] data = GetBufferFromList();
-                
-                    // 채널에 메시지 쓰기
-                    await _messageChannel.Writer.WriteAsync(new SerialMessage
-                    {
-                        Data = data,
-                        DataSize = data.Length,
-                        Timestamp = DateTime.Now,
-                        Type = SerialMessage.MessageType.Received
-                    }, token);
-                    break;
-                }
+                    Data = data,
+                    DataSize = data.Length,
+                    Timestamp = DateTime.Now,
+                    Type = SerialMessage.MessageType.Received
+                }, token);   
             }
 
+            // Buffer adding
             if (_canBufferAdd)
             {
                 _bufferList.Add(currentByte);
             }
         }
     }
-
     
     /// <summary>
     /// Return <see cref="byte"/>[] from <see cref="List{Byte}"/> and Clear List
@@ -285,6 +285,7 @@ public class SerialDevice : IDisposable
 
         return bytes;
     }
+    
     
     /// <summary>
     /// Asynchronously processes message data periodically when connecting to a serial connection.

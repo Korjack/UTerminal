@@ -108,6 +108,9 @@ public class SerialSettings : ReactiveObject
     private DataBitsType _dataBits = DataBitsType.Bits8;
     private StopBitsType _stopBits = StopBitsType.Bits1;
 
+    private byte _customSTX = 0x00;
+    private byte _customETX = 0x00;
+
     #endregion
     
     #region Properties
@@ -134,6 +137,17 @@ public class SerialSettings : ReactiveObject
     {
         get => _stopBits; 
         set => this.RaiseAndSetIfChanged(ref _stopBits, value);
+    }
+
+    public byte CustomSTX
+    {
+        get => _customSTX;
+        set => this.RaiseAndSetIfChanged(ref _customSTX, value);
+    }
+    public byte CustomETX
+    {
+        get => _customETX;
+        set => this.RaiseAndSetIfChanged(ref _customETX, value);
     }
     
     #endregion

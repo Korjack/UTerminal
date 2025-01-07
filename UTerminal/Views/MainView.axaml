@@ -20,6 +20,7 @@
         <cv:BoolToStringConverter x:Key="BoolToStringConverter"/>
         <cv:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
         <cv:EnumDescriptionConverter x:Key="EnumDescriptionConverter"/>
+        <cv:ByteToHexStringConverter x:Key="ByteToHexStringConverter"/>
     </UserControl.Resources>
     
     <Grid ShowGridLines="False">
@@ -350,11 +351,12 @@
                                 </EventTriggerBehavior>
                             </Interaction.Behaviors>
                         </RadioButton>
-                        <RadioButton Content="Custom"
+                        <RadioButton Content="Custom STX-ETX"
                                      GroupName="ReadTypeGroup">
                             <Interaction.Behaviors>
                                 <EventTriggerBehavior EventName="Click">
-                                    <InvokeCommandAction/>
+                                    <InvokeCommandAction Command="{Binding ReadTypeChangedCommand}"
+                                                         CommandParameter="Custom"/>
                                 </EventTriggerBehavior>
                             </Interaction.Behaviors>
                         </RadioButton>
@@ -371,6 +373,44 @@
                            Padding="5"/>
             </Panel>
             <!-- 버퍼 읽기모드 선택 -->
+            
+            <!-- 커스텀 STX ETX -->
+            <Panel>
+                <Border BorderBrush="Gray" BorderThickness="2" Padding="5">
+                    <StackPanel Orientation="Horizontal" Spacing="5" Margin="0, 8, 0, 0">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top"
+                                       Text="STX"
+                                       HorizontalAlignment="Center"/>
+                            <TextBox VerticalContentAlignment="Center"
+                                     HorizontalContentAlignment="Center"
+                                     MaxLength="2"
+                                     Text="{Binding SerialSettings.CustomSTX, Converter={StaticResource ByteToHexStringConverter}}"
+                                     KeyDown="CustomStxEtx_OnKeyDown"/>
+                        </DockPanel>
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top"
+                                       Text="ETX"
+                                       HorizontalAlignment="Center"/>
+                            <TextBox VerticalContentAlignment="Center"
+                                     HorizontalContentAlignment="Center"
+                                     MaxLength="2"
+                                     Text="{Binding SerialSettings.CustomETX, Converter={StaticResource ByteToHexStringConverter}}"
+                                     KeyDown="CustomStxEtx_OnKeyDown"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+                
+                <TextBlock Text="Custom STX-ETX"
+                           FontSize="10"
+                           Background="White"
+                           Foreground="Black"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Top"
+                           Margin="0,-10,0,0"
+                           Padding="5"/>
+            </Panel>
+            <!-- 커스텀 STX ETX -->
             
         </StackPanel>
         <!-- 시리얼 데이터 뷰 옵션 -->

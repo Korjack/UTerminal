@@ -318,6 +318,7 @@ public class MainViewModel : ViewModelBase
         {
             "NewLine" => ReadMode.NewLine,
             "STX_ETX" => ReadMode.STX_ETX,
+            "Custom" => ReadMode.Custom,
             _ => _serialDevice.CurrentMode
         };
     }
