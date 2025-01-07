@@ -7,7 +7,6 @@ namespace UTerminal.Models;
 public class SerialStringManager
 {
     private readonly SerialMessage[] _messageBuffer;
-    private readonly StringBuilder _stringBuilder;
     private EncodingBytes _currentFormat;
     
     private readonly int _capacity;
@@ -17,6 +16,8 @@ public class SerialStringManager
     
     private static readonly char[] TimeFormatBuffer = new char[14]; // [HH:mm:ss.fff]
     private static readonly ThreadLocal<char[]> SharedBuffer = new(() => new char[4096]); // 문자열 변환을 위한 재사용 가능한 버퍼
+    
+    private readonly object _lock = new(); // 동기화를 위한 lock 객체
 
     public SerialStringManager(int capacity, EncodingBytes initialFormat = EncodingBytes.ASCII)
     {
@@ -28,7 +29,6 @@ public class SerialStringManager
         _count = 0;
         
         _messageBuffer = new SerialMessage[capacity];
-        _stringBuilder = new StringBuilder(capacity * 64);
         _currentFormat = initialFormat;
     }
 
@@ -38,15 +38,18 @@ public class SerialStringManager
     /// <param name="message"><see cref="SerialMessage"/> message</param>
     public void Add(SerialMessage message)
     {
-        if (_count == _capacity)
+        lock (_lock)
         {
-            _head = (_head + 1) % _capacity;
-            _count--;
-        }
+            if (_count == _capacity)
+            {
+                _head = (_head + 1) % _capacity;
+                _count--;
+            }
 
-        _messageBuffer[_tail] = message;
-        _tail = (_tail + 1) % _capacity;
-        _count++;
+            _messageBuffer[_tail] = message;
+            _tail = (_tail + 1) % _capacity;
+            _count++;   
+        }
     }
 
     /// <summary>
@@ -62,7 +65,12 @@ public class SerialStringManager
     /// <param name="newFormat"></param>
     public void ChangeFormat(EncodingBytes newFormat)
     {
-        _currentFormat = newFormat;
+        if(_currentFormat == newFormat) return;
+        
+        lock (_lock)
+        {
+            _currentFormat = newFormat;
+        }
     }
     
     /// <summary>
@@ -73,21 +81,39 @@ public class SerialStringManager
     {
         if (_count == 0) return string.Empty;
 
-        _stringBuilder.Clear();
+        SerialMessage[] snapshot;
+        int snapshotCount;
+        EncodingBytes format;
         
-        int index = _head;
-        for (int i = 0; i < _count; i++)
+        lock (_lock)
         {
-            FormatTimeToBuffer(_messageBuffer[index].Timestamp, TimeFormatBuffer);
-            _stringBuilder.Append(TimeFormatBuffer)
-                         .Append(' ')
-                         .Append(FormatData(_messageBuffer[index].Data, _currentFormat))
-                         .AppendLine();
+            snapshot = new SerialMessage[_count];
+            snapshotCount = _count;
+            format = _currentFormat;
             
-            index = (index + 1) % _capacity;
+            var index = _head;
+            for (var i = 0; i < _count; i++)
+            {
+                snapshot[i] = _messageBuffer[index];
+                index = (index + 1) % _capacity;
+            }
         }
 
-        return _stringBuilder.ToString();
+        var localBuilder = new StringBuilder(_capacity * 64);
+        
+        var currentIndex = 0;
+        for (var i = 0; i < snapshotCount; i++)
+        {
+            FormatTimeToBuffer(snapshot[currentIndex].Timestamp, TimeFormatBuffer);
+            localBuilder.Append(TimeFormatBuffer)
+                .Append(' ')
+                .Append(FormatData(snapshot[currentIndex].Data, format))
+                .AppendLine();
+            
+            currentIndex = (currentIndex + 1) % snapshotCount;
+        }
+
+        return localBuilder.ToString();
     }
 
     /// <summary>
@@ -190,7 +216,28 @@ public class SerialStringManager
         return (char)(value < 10 ? '0' + value : 'A' + (value - 10));
     }
 
-    public int Count => _count;
+    
+    public int Count
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _count;
+            }
+        }
+    }
+
     public int Capacity => _capacity;
-    public bool IsFull => _count >= _capacity;
+
+    public bool IsFull
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _count >= _capacity;
+            }
+        }
+    }
 }
