@@ -1,24 +1,42 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <OutputType>WinExe</OutputType>
+        <OutputType>Exe</OutputType>
         <!--If you are willing to use Windows/MacOS native APIs you will need to create 3 projects.
         One for Windows with net8.0-windows TFM, one for MacOS with net8.0-macos and one with net8.0 TFM for Linux.-->
         <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
-        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>        
     </PropertyGroup>
 
     <PropertyGroup>
         <ApplicationManifest>app.manifest</ApplicationManifest>
     </PropertyGroup>
 
-<!--    <PropertyGroup>-->
-<!--        <OutputType>Exe</OutputType>-->
-<!--        <PublishSingleFile>true</PublishSingleFile>-->
-<!--        <SelfContained>true</SelfContained>-->
-<!--        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>-->
-<!--        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>-->
-<!--    </PropertyGroup>-->
+    <!-- 공통 Release 설정 -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+        <PublishSingleFile>true</PublishSingleFile>
+        <SelfContained>true</SelfContained>
+        <DebugType>embedded</DebugType>
+        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>        
+    </PropertyGroup>
+
+    <!-- Windows 배포 설정 -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Release' And '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))'">
+        <OutputType>WinExe</OutputType>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    </PropertyGroup>
+
+    <!-- macOS Release 설정 -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Release' And '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))'">
+        <RuntimeIdentifier>$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLower().Contains('arm64') ? 'osx-arm64' : 'osx-x64')</RuntimeIdentifier>        
+        <UseAppHost>true</UseAppHost>
+    </PropertyGroup>
+
+    <!-- Linux Release 설정 -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Release' And '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))'">
+        <RuntimeIdentifier>linux-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLower())</RuntimeIdentifier>
+    </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.1.0" />
