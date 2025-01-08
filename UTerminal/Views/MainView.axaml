@@ -18,9 +18,10 @@
     
     <UserControl.Resources>
         <cv:BoolToStringConverter x:Key="BoolToStringConverter"/>
-        <cv:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
+        <cv:CheckSameValueConverter x:Key="CheckSameValueConverter"/>
         <cv:EnumDescriptionConverter x:Key="EnumDescriptionConverter"/>
         <cv:ByteToHexStringConverter x:Key="ByteToHexStringConverter"/>
+        <cv:NumberToBaudrateConverter x:Key="NumberToBaudrateConverter"/>
     </UserControl.Resources>
     
     <Grid ShowGridLines="False">
@@ -31,6 +32,8 @@
             <RowDefinition Height="0.1*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
+        
+        <!-- 시리얼 연결 옵션 -->
         <StackPanel Grid.Row="0" 
                     Margin="0, 0, 0, 10"
                     Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Stretch" Spacing="10" Height="160">
@@ -107,10 +110,10 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <RadioButton Content="{Binding Converter={StaticResource EnumDescriptionConverter}}"
+                                <RadioButton Content="{Binding DisplayValue}"
                                              GroupName="BaudRateGroup">
                                     <RadioButton.IsChecked>
-                                        <MultiBinding Converter="{StaticResource EnumToBooleanConverter}">
+                                        <MultiBinding Converter="{StaticResource CheckSameValueConverter}">
                                             <Binding/>
                                             <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).SerialSettings.BaudRate"/>
                                         </MultiBinding>
@@ -154,7 +157,7 @@
                                 <RadioButton Content="{Binding Converter={StaticResource EnumDescriptionConverter}}"
                                              GroupName="ParityGroup">
                                     <RadioButton.IsChecked>
-                                        <MultiBinding Converter="{StaticResource EnumToBooleanConverter}">
+                                        <MultiBinding Converter="{StaticResource CheckSameValueConverter}">
                                             <Binding/>
                                             <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).SerialSettings.Parity"/>
                                         </MultiBinding>
@@ -198,7 +201,7 @@
                                 <RadioButton Content="{Binding Converter={StaticResource EnumDescriptionConverter}}"
                                              GroupName="DataBitsGroup">
                                     <RadioButton.IsChecked>
-                                        <MultiBinding Converter="{StaticResource EnumToBooleanConverter}">
+                                        <MultiBinding Converter="{StaticResource CheckSameValueConverter}">
                                             <Binding/>
                                             <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).SerialSettings.DataBits"/>
                                         </MultiBinding>
@@ -242,7 +245,7 @@
                                 <RadioButton Content="{Binding Converter={StaticResource EnumDescriptionConverter}}"
                                              GroupName="StopBitsGroup">
                                     <RadioButton.IsChecked>
-                                        <MultiBinding Converter="{StaticResource EnumToBooleanConverter}">
+                                        <MultiBinding Converter="{StaticResource CheckSameValueConverter}">
                                             <Binding/>
                                             <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).SerialSettings.StopBits"/>
                                         </MultiBinding>
@@ -273,6 +276,7 @@
             <!-- 스탑비트 설정 -->
           
         </StackPanel>
+        <!-- 시리얼 연결 옵션 -->
         
         <!-- 시리얼 데이터 뷰 옵션 -->
         <StackPanel Grid.Row="1" 
@@ -412,6 +416,65 @@
             </Panel>
             <!-- 커스텀 STX ETX -->
             
+            <!-- Custom ComPort -->
+            <Panel IsEnabled="{Binding !IsConnected}">
+                <Border BorderBrush="Gray" BorderThickness="2" Padding="5">
+                    <StackPanel Spacing="5" Margin="0, 8, 0, 0">
+                        <RadioButton x:Name="CustomPortPathRadioButton" 
+                                     Content="Custom ComPort"
+                                     GroupName="COMPortGroup">
+                        </RadioButton>
+                        <TextBox x:Name="CustomPortPathTextBox"
+                                 IsEnabled="{Binding #CustomPortPathRadioButton.IsChecked}"
+                                 Watermark="Write port path">
+                            <Interaction.Behaviors>
+                                <EventTriggerBehavior EventName="LostFocus">
+                                    <InvokeCommandAction Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ComPortRadioChangedCommand}"
+                                                         CommandParameter="{Binding #CustomPortPathTextBox.Text}"/>
+                                </EventTriggerBehavior>
+                            </Interaction.Behaviors>
+                        </TextBox>
+                    </StackPanel>
+                </Border>
+                
+                <TextBlock Text="Custom ComPort"
+                           FontSize="10"
+                           Background="White"
+                           Foreground="Black"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Top"
+                           Margin="0,-10,0,0"
+                           Padding="5"/>
+            </Panel>
+            <!-- Custom ComPort -->
+            
+            <!-- Custom Baudrate -->
+            <Panel IsEnabled="{Binding !IsConnected}">
+                <Border BorderBrush="Gray" BorderThickness="2" Padding="5">
+                    <StackPanel Spacing="5" Margin="0, 8, 0, 0">
+                        <RadioButton x:Name="CustomBaudrateButton" 
+                                     Content="Custom Baudrate"
+                                     GroupName="BaudRateGroup">
+                        </RadioButton>
+                        <NumericUpDown Value="{Binding SerialSettings.BaudRate, Converter={StaticResource NumberToBaudrateConverter}}"
+                                       IsEnabled="{Binding #CustomBaudrateButton.IsChecked}"
+                                       FormatString="0"
+                                       ShowButtonSpinner="False"
+                                       Watermark="Write baudrate as number"/>
+                    </StackPanel>
+                </Border>
+                
+                <TextBlock Text="Custom Baudrate"
+                           FontSize="10"
+                           Background="White"
+                           Foreground="Black"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Top"
+                           Margin="0,-10,0,0"
+                           Padding="5"/>
+            </Panel>
+            <!-- Custom Baudrate -->
+            
         </StackPanel>
         <!-- 시리얼 데이터 뷰 옵션 -->
         
@@ -460,12 +523,13 @@
         </Grid>
         <!-- 데이터 송신 -->
         
-        
+        <!-- 상태표시줄 -->
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
             <!-- 데이터 전송 속도 -->
             <TextBlock TextAlignment="Center" Text="{Binding DataRate, StringFormat='Data Rate: {0:N2} Hz'}"/>
             <!-- 데이터 전송 속도 -->
         </StackPanel>
+        <!-- 상태표시줄 -->
     </Grid>
     
 </UserControl>

@@ -49,7 +49,7 @@ public class MainViewModel : ViewModelBase
     public SerialSettings SerialSettings => _serialDevice.SerialSettings;
     
     public ObservableCollection<OptionRadioItem> DefaultComPortList { get; private set; } = null!;
-    public static Array BaudRatesOption => Enum.GetValues(typeof(BaudRateType));
+    public IEnumerable<BaudRateType> BaudRatesOption => BaudRateType.StandardBaudRates;
     public static Array ParityOption => Enum.GetValues(typeof(ParityType));
     public static Array DataBitsOption => Enum.GetValues(typeof(DataBitsType));
     public static Array StopBitsOption => Enum.GetValues(typeof(StopBitsType));
@@ -151,7 +151,7 @@ public class MainViewModel : ViewModelBase
         ReScanCommand = ReactiveCommand.Create(ReScanSerialPort);
         
         // 옵션 설정 커맨드
-        ComPortRadioChangedCommand = ReactiveCommand.Create<OptionRadioItem>(ComPortRadio_Clicked);
+        ComPortRadioChangedCommand = ReactiveCommand.Create<object>(ComPortRadio_Clicked);
         SerialSettingChangedCommand = ReactiveCommand.Create<object>(SerialSettingRadio_Clicked);
         EncodingBytesChangedCommand = ReactiveCommand.Create<string>(EncodingByteRadio_Clicked);
         
@@ -207,10 +207,17 @@ public class MainViewModel : ViewModelBase
     /// <summary>
     /// Set Serial Port
     /// </summary>
-    /// <param name="item">Selected Serial Port Radio Item</param>
-    private void ComPortRadio_Clicked(OptionRadioItem item)
+    /// <param name="o">Selected Serial Port Radio Item or Serial port path</param>
+    private void ComPortRadio_Clicked(object o)
     {
-        _serialDevice.SetPortPath(_serialDevice.SerialPortList[item.Value]);
+        if (o is OptionRadioItem item)
+        {
+            _serialDevice.SetPortPath(_serialDevice.SerialPortList[item.Value]);
+        }
+        else if (o is string s)
+        {
+            _serialDevice.SetPortPath(s);
+        }
     }
 
     

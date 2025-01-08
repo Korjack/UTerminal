@@ -1,15 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using Avalonia.Data.Converters;
-using Avalonia.Markup.Xaml.MarkupExtensions;
-using DynamicData.Kernel;
-using UTerminal.Models;
 
 namespace UTerminal.Converter;
 
-public class EnumToBooleanConverter : IMultiValueConverter
+public class CheckSameValueConverter : IMultiValueConverter
 {
     public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
     {

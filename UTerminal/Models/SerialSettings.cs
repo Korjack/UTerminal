@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO.Ports;
@@ -9,22 +10,94 @@ namespace UTerminal.Models;
 /// <summary>
 /// Baudrate Default Enum
 /// </summary>
-public enum BaudRateType
+public class BaudRateType
 {
-    [Description("600")] Baud600 = 600,
-    [Description("1200")] Baud1200 = 1200,
-    [Description("2400")] Baud2400 = 2400,
-    [Description("4800")] Baud4800 = 4800,
-    [Description("9600")] Baud9600 = 9600,
-    [Description("14400")] Baud14400 = 14400,
-    [Description("19200")] Baud19200 = 19200,
-    [Description("28800")] Baud28800 = 28800,
-    [Description("38400")] Baud38400 = 38400,
-    [Description("56000")] Baud56000 = 56000,
-    [Description("57600")] Baud57600 = 57600,
-    [Description("115200")] Baud115200 = 115200,
-    [Description("128000")] Baud128000 = 128000,
-    [Description("256000")] Baud256000 = 256000
+    private readonly int _value;
+
+    #region Static Fields
+
+    public static implicit operator int(BaudRateType baudRateType) => baudRateType._value;
+    public static implicit operator BaudRateType(int baudRate) => new(baudRate);
+    public static IEnumerable<BaudRateType> StandardBaudRates
+    {
+        get
+        {
+            yield return Baud600;
+            yield return Baud1200;
+            yield return Baud2400;
+            yield return Baud4800;
+            yield return Baud9600;
+            yield return Baud14400;
+            yield return Baud19200;
+            yield return Baud28800;
+            yield return Baud38400;
+            yield return Baud56000;
+            yield return Baud57600;
+            yield return Baud115200;
+            yield return Baud128000;
+            yield return Baud256000;
+        }
+    }
+
+    #endregion
+
+    #region Standard Baudrate
+
+    public static readonly BaudRateType Baud600 = new (600);
+    public static readonly BaudRateType Baud1200 = new (1200);
+    public static readonly BaudRateType Baud2400 = new (2400);
+    public static readonly BaudRateType Baud4800 = new (4800);
+    public static readonly BaudRateType Baud9600 = new (9600);
+    public static readonly BaudRateType Baud14400 = new (14400);
+    public static readonly BaudRateType Baud19200 = new (19200);
+    public static readonly BaudRateType Baud28800 = new (28800);
+    public static readonly BaudRateType Baud38400 = new (38400);
+    public static readonly BaudRateType Baud56000 = new (56000);
+    public static readonly BaudRateType Baud57600 = new (57600);
+    public static readonly BaudRateType Baud115200 = new (115200);
+    public static readonly BaudRateType Baud128000 = new (128000);
+    public static readonly BaudRateType Baud256000 = new (256000);
+
+    #endregion
+    
+    public BaudRateType(int baudRate)
+    {
+        if (baudRate <= 0)
+            throw new ArgumentException("Baud rate must be greater than 0", nameof(baudRate));
+
+        _value = baudRate;
+    }
+    
+    public override string ToString() => _value.ToString();
+    public string DisplayValue => _value.ToString();
+
+    #region Operators
+
+    public override int GetHashCode()
+    {
+        return _value.GetHashCode();
+    }
+    
+    public override bool Equals(object? obj)
+    {
+        if (obj is null) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != GetType()) return false;
+        
+        return _value == ((BaudRateType)obj)._value;
+    }
+    public static bool operator ==(BaudRateType? left, BaudRateType? right)
+    {
+        if (left is null) return right is null;
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(BaudRateType left, BaudRateType right)
+    {
+        return !(left == right);
+    }
+
+    #endregion
 }
 
 /// <summary>
