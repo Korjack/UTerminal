@@ -1,0 +1,67 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Design.PreviewWith>
+        <RadioButton Content="라디오 버튼 크기 변경 테스트"/>
+    </Design.PreviewWith>
+
+    <!-- Add Styles Here -->
+    <Style Selector="RadioButton">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border
+                        Name="RootBorder"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                        <Grid ColumnDefinitions="12,*">
+                            <Grid Height="16" VerticalAlignment="Top">
+
+                                <Ellipse
+                                    Name="OuterEllipse"
+                                    Width="12"
+                                    Height="12"
+                                    Fill="{DynamicResource RadioButtonOuterEllipseFill}"
+                                    Stroke="{DynamicResource RadioButtonOuterEllipseStroke}"
+                                    StrokeThickness="{DynamicResource RadioButtonBorderThemeThickness}"
+                                    UseLayoutRounding="False" />
+
+                                <Ellipse
+                                    Name="CheckOuterEllipse"
+                                    Width="12"
+                                    Height="12"
+                                    Fill="{DynamicResource RadioButtonOuterEllipseCheckedFill}"
+                                    Opacity="0"
+                                    Stroke="{DynamicResource RadioButtonOuterEllipseCheckedStroke}"
+                                    StrokeThickness="{DynamicResource RadioButtonBorderThemeThickness}"
+                                    UseLayoutRounding="False" />
+
+                                <Ellipse
+                                    Name="CheckGlyph"
+                                    Width="5"
+                                    Height="5"
+                                    Fill="{DynamicResource RadioButtonCheckGlyphFill}"
+                                    Opacity="0"
+                                    Stroke="{DynamicResource RadioButtonCheckGlyphStroke}"
+                                    UseLayoutRounding="False" />
+                            </Grid>
+
+                            <ContentPresenter
+                                Name="PART_ContentPresenter"
+                                Grid.Column="1"
+                                Margin="{TemplateBinding Padding}"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                Foreground="{TemplateBinding Foreground}"
+                                RecognizesAccessKey="True" />
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Margin" Value="0, 0, 10, 0"/>
+    </Style>
+</Styles>

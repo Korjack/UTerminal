@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UTerminal", "UTerminal\UTerminal.csproj", "{236EC43B-2100-4778-8C83-57D72F8DAC62}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UTerminal.Desktop", "UTerminal.Desktop\UTerminal.Desktop.csproj", "{A5BEEEC6-E5EC-445D-BE1A-FC8B90E4C1E8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{236EC43B-2100-4778-8C83-57D72F8DAC62}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{236EC43B-2100-4778-8C83-57D72F8DAC62}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{236EC43B-2100-4778-8C83-57D72F8DAC62}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{236EC43B-2100-4778-8C83-57D72F8DAC62}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A5BEEEC6-E5EC-445D-BE1A-FC8B90E4C1E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5BEEEC6-E5EC-445D-BE1A-FC8B90E4C1E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5BEEEC6-E5EC-445D-BE1A-FC8B90E4C1E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5BEEEC6-E5EC-445D-BE1A-FC8B90E4C1E8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
