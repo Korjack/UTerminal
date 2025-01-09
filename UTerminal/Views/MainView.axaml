@@ -524,11 +524,22 @@
         <!-- 데이터 송신 -->
         
         <!-- 상태표시줄 -->
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+        <Grid Grid.Row="4" ColumnDefinitions="*,Auto">
+
+            <!-- Last Error Message -->
+            <Border Grid.Column="0" 
+                    Background="Gray" Opacity="0.3"
+                    Padding="10, 0" Margin="0, 0, 5, 0">
+                <TextBlock Text="{Binding LastErrorMessage}"/>
+            </Border>
+            <!-- Last Error Message -->
+            
             <!-- 데이터 전송 속도 -->
-            <TextBlock TextAlignment="Center" Text="{Binding DataRate, StringFormat='Data Rate: {0:N2} Hz'}"/>
+            <TextBlock  Grid.Column="1" 
+                        TextAlignment="Center" 
+                        Text="{Binding DataRate, StringFormat='Data Rate: {0:N2} Hz'}"/>
             <!-- 데이터 전송 속도 -->
-        </StackPanel>
+        </Grid>
         <!-- 상태표시줄 -->
     </Grid>
     

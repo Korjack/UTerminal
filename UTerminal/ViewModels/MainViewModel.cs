@@ -66,6 +66,8 @@ public class MainViewModel : ViewModelBase
     
     private readonly SerialStringManager _serialStringManager = new(1000);
     public delegate Task SendSerialDataDelegate(string data);
+    
+    private string _lastErrorMessage = "When serial error appear, updated only latest message here";
 
     #endregion
     
@@ -87,6 +89,12 @@ public class MainViewModel : ViewModelBase
     {
         get => _dataRate;
         private set => this.RaiseAndSetIfChanged(ref _dataRate, value);
+    }
+
+    public string LastErrorMessage
+    {
+        get => _lastErrorMessage;
+        private set => this.RaiseAndSetIfChanged(ref _lastErrorMessage, value);
     }
 
     #endregion
@@ -139,6 +147,11 @@ public class MainViewModel : ViewModelBase
             .Select(ProcessMessages)
             .ObserveOn(RxApp.MainThreadScheduler)
             .Subscribe(UpdateUi);
+        
+        // Process error message
+        serialDataStream
+            .Where(x => x.Type == SerialMessage.MessageType.Error)
+            .Do(UpdateErrorMessage);
     }
     
     /// <summary>
@@ -381,6 +394,16 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    
+    /// <summary>
+    /// Update Error Message
+    /// </summary>
+    /// <param name="message"><see cref="SerialMessage.MessageType.Error"/> Type Message Data</param>
+    private void UpdateErrorMessage(SerialMessage message)
+    {
+        LastErrorMessage = message.ErrorText;
+    }
+    
     #endregion
     
     #endregion

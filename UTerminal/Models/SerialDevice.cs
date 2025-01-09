@@ -99,7 +99,7 @@ public class SerialDevice : IDisposable
     public bool Connect()
     {
         if (IsConnected) return false;
-        
+
         try
         {
             _serialPort = new SerialPort(
@@ -112,12 +112,12 @@ public class SerialDevice : IDisposable
 
             if (_serialTokenSource.IsCancellationRequested) _serialTokenSource = new CancellationTokenSource();
             if (_channelTokenSource.IsCancellationRequested) _channelTokenSource = new CancellationTokenSource();
-            
+
             _serialPort.Open();
 
             Task.Run(async () => await ProcessMessageAsync(_channelTokenSource, _serialTokenSource.Token));
             Task.Run(async () => await SerialPort_DataReceivedAsync(_serialTokenSource.Token));
-            
+
             return true;
         }
         catch (Exception e)
@@ -177,19 +177,36 @@ public class SerialDevice : IDisposable
                             await ProcessDataStxEtx(buffer, token, _settings.CustomSTX, _settings.CustomETX);
                             break;
                         default:
-                            throw new ArgumentOutOfRangeException();
+                            await OnMessageReceived(new SerialMessage
+                            {
+                                ErrorText = "No Support other mode",
+                                Timestamp = DateTime.Now,
+                                Type = SerialMessage.MessageType.Error
+                            });
+                            break;
                     }
                 }
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException e)
         {
             // 작업이 취소된 경우의 처리
+            await OnMessageReceived(new SerialMessage
+            {
+                ErrorText = e.Message,
+                Timestamp = DateTime.Now,
+                Type = SerialMessage.MessageType.Error
+            });
         }
-        catch (Exception ex)
+        catch (Exception e)
         {
             // 예외 처리
-            Debug.WriteLine($"Error reading from serial port: {ex.Message}");
+            await OnMessageReceived(new SerialMessage
+            {
+                ErrorText = e.Message,
+                Timestamp = DateTime.Now,
+                Type = SerialMessage.MessageType.Error
+            });
         }
     }
 
@@ -308,9 +325,15 @@ public class SerialDevice : IDisposable
                 }
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException e)
         {
             // 정상적인 종료 처리
+            await OnMessageReceived(new SerialMessage
+            {
+                ErrorText = e.Message,
+                Timestamp = DateTime.Now,
+                Type = SerialMessage.MessageType.Error
+            });
         }
     }
     
