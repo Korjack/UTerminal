@@ -185,7 +185,7 @@ public class SerialSettings : ReactiveObject
     private byte _customETX = 0x00;
 
     private int _packetSize = 0;
-
+    
     #endregion
     
     #region Properties
