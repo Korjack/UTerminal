@@ -184,6 +184,8 @@ public class SerialSettings : ReactiveObject
     private byte _customSTX = 0x00;
     private byte _customETX = 0x00;
 
+    private int _packetSize = 0;
+
     #endregion
     
     #region Properties
@@ -221,6 +223,20 @@ public class SerialSettings : ReactiveObject
     {
         get => _customETX;
         set => this.RaiseAndSetIfChanged(ref _customETX, value);
+    }
+
+    public int PacketSize => _packetSize;
+
+    public string PacketSizeText
+    {
+        get => _packetSize.ToString();
+        set
+        {
+            if (int.TryParse(value, out int number))
+            {
+                this.RaiseAndSetIfChanged(ref _packetSize, number);
+            }
+        }
     }
     
     #endregion
