@@ -22,6 +22,7 @@
         <cv:EnumDescriptionConverter x:Key="EnumDescriptionConverter"/>
         <cv:ByteToHexStringConverter x:Key="ByteToHexStringConverter"/>
         <cv:NumberToBaudrateConverter x:Key="NumberToBaudrateConverter"/>
+        <cv:BooleanOrConverter x:Key="BooleanOrConverter"/>
     </UserControl.Resources>
     
     <Grid ShowGridLines="False">
@@ -346,7 +347,7 @@
                                 </EventTriggerBehavior>
                             </Interaction.Behaviors>
                         </RadioButton>
-                        <RadioButton Content="STX-ETX"
+                        <RadioButton x:Name="StxEtx" Content="STX-ETX"
                                      GroupName="ReadTypeGroup">
                             <Interaction.Behaviors>
                                 <EventTriggerBehavior EventName="Click">
@@ -355,7 +356,7 @@
                                 </EventTriggerBehavior>
                             </Interaction.Behaviors>
                         </RadioButton>
-                        <RadioButton Content="Custom STX-ETX"
+                        <RadioButton x:Name="CustomStxEtx" Content="Custom STX-ETX"
                                      GroupName="ReadTypeGroup">
                             <Interaction.Behaviors>
                                 <EventTriggerBehavior EventName="Click">
@@ -378,8 +379,36 @@
             </Panel>
             <!-- 버퍼 읽기모드 선택 -->
             
-            <!-- 커스텀 STX ETX -->
+            <!-- 패킷 크기 설정 -->
             <Panel>
+                <Panel.IsEnabled>
+                    <MultiBinding Converter="{StaticResource BooleanOrConverter}">
+                        <MultiBinding.Bindings>
+                            <Binding Path="#StxEtx.IsChecked"/>
+                            <Binding Path="#CustomStxEtx.IsChecked"/>
+                        </MultiBinding.Bindings>
+                    </MultiBinding>
+                </Panel.IsEnabled>
+                <Border BorderBrush="Gray" BorderThickness="2" Padding="5">
+                    <NumericUpDown VerticalAlignment="Center"
+                                   ShowButtonSpinner="False"
+                                   FormatString="0"
+                                   Text="{Binding SerialSettings.PacketSizeText, UpdateSourceTrigger=LostFocus}"
+                                   HorizontalContentAlignment="Center"/>
+                </Border>
+                <TextBlock Text="Packet Size"
+                           FontSize="10"
+                           Background="White"
+                           Foreground="Black"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Top"
+                           Margin="0,-10,0,0"
+                           Padding="5"/>
+            </Panel>
+            <!-- 패킷 크기 설정 -->
+            
+            <!-- 커스텀 STX ETX -->
+            <Panel IsEnabled="{Binding #CustomStxEtx.IsChecked}">
                 <Border BorderBrush="Gray" BorderThickness="2" Padding="5">
                     <StackPanel Orientation="Horizontal" Spacing="5" Margin="0, 8, 0, 0">
                         <DockPanel>
