@@ -160,6 +160,7 @@ public class SerialDevice : IDisposable
             while (!token.IsCancellationRequested)
             {
                 int bufferSize = _serialPort.BytesToRead;
+
                 if (bufferSize > 0)
                 {
                     byte[] buffer = new byte[bufferSize];
@@ -264,7 +265,7 @@ public class SerialDevice : IDisposable
             {
                 _canBufferAdd = true;
             }
-            else if(currentByte == etx)
+            else if(currentByte == etx && _bufferList.Count >= _settings.PacketSize - 1)
             {
                 _canBufferAdd = false;
                 _bufferList.Add(currentByte);
@@ -278,7 +279,7 @@ public class SerialDevice : IDisposable
                     DataSize = data.Length,
                     Timestamp = DateTime.Now,
                     Type = SerialMessage.MessageType.Received
-                }, token);   
+                }, token);
             }
 
             // Buffer adding

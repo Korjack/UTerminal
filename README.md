@@ -16,6 +16,8 @@ Through UTerminal, users can select encoding types such as ASCII, HEX, and UTF-8
 - Connect serial port
 - ASCII, HEX, UTF-8 Encoding Types
 - CR+LF, STX-ETX, Custom STX-ETX Read Type
+  - Parse with packet size.
+  - If packet size set to 0 or empty, parse and return packet data when ETX is detected
 - Custom ComPort Path, Custom Baudrate
 - Macros for fast transfers
 
