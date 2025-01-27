@@ -16,6 +16,7 @@ public class SerialDevice : IDisposable
 
     private SerialPort? _serialPort;
     private readonly SerialSettings _settings;
+    private readonly SerialDataParser _parser;
 
     #region Constants
 
@@ -75,11 +76,13 @@ public class SerialDevice : IDisposable
     public SerialDevice()
     {
         _settings = new SerialSettings();
+        _parser = new SerialDataParser();
     }
     
     public SerialDevice(SerialSettings settings)
     {
         _settings = settings;
+        _parser = new SerialDataParser();
     }
     
     public void Dispose()
@@ -398,10 +401,11 @@ public class SerialDevice : IDisposable
         _settings.PortPath = port;
     }
 
-    public async Task<bool> WriteAsync(byte[] data)
+    public async Task<bool> WriteAsync(string input)
     {
         if(_serialPort == null) return false;
-        
+
+        byte[] data = _parser.ParseToBytes(input);
         await _serialPort.BaseStream.WriteAsync(data, _serialTokenSource.Token);
 
         return true;
