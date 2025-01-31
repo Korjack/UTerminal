@@ -304,9 +304,7 @@ public class MainViewModel : ViewModelBase
         if(string.IsNullOrEmpty(data)) return;
         if (!IsConnected) return;
         
-        //TODO: String으로 들어온 Hex데이터를 처리해서 Byte로 넘길 수 있도록 수정 필요
-        var byteData = Encoding.UTF8.GetBytes(data);
-        if (await _serialDevice.WriteAsync(byteData))
+        if (await _serialDevice.WriteAsync(data))
         {
             // Serial Write Success
         }
