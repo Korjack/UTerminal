@@ -11,10 +11,22 @@ public class ULogManager
     private readonly ILog _log;
     private RollingFileAppender? _fileAppender;
 
-    public ULogManager(string logType, LogConfig config)
+    public ULogManager(string logType)
     {
         _log = LogManager.GetLogger(logType);
-        ConfigureLogging(config);
+    }
+
+    public ULogManager(string logType, LogConfig newConfig)
+    {
+        _log = LogManager.GetLogger(logType);
+
+        // if logger appenders exits, remove all
+        if (_log.Logger is Logger { Appenders.Count: > 0 } logger)
+        {
+            logger.RemoveAllAppenders();
+        }
+
+        ConfigureLogging(newConfig);
     }
 
     private void ConfigureLogging(LogConfig config)
@@ -31,30 +43,32 @@ public class ULogManager
             StaticLogFileName = true,
             MaxSizeRollBackups = config.MaxSizeRollBackups,
             MaximumFileSize = config.MaximumFileSize,
-            Layout = new PatternLayout
-            {
-                ConversionPattern = config.Layout
-            }
+            Layout = new PatternLayout(config.Layout)
         };
 
         ((PatternLayout)_fileAppender.Layout).ActivateOptions();
         _fileAppender.ActivateOptions();
 
-        Logger logger = hierarchy.GetLogger(_log.Logger.Name) as Logger;
-        logger.AddAppender(_fileAppender);
-        logger.Level = config.LogLevel;
-        logger.Additivity = false;
+        if (hierarchy.GetLogger(_log.Logger.Name) is Logger logger)
+        {
+            logger.AddAppender(_fileAppender);
+            logger.Level = config.LogLevel;
+            logger.Additivity = false;
 
-        hierarchy.Configured = true;
+            hierarchy.Configured = true;
+        }
+        else
+        {
+            hierarchy.Configured = false;
+        }
     }
 
     public void ChangeLogFilePath(string newLogFilePath)
     {
-        if (_fileAppender != null)
-        {
-            _fileAppender.File = newLogFilePath;
-            _fileAppender.ActivateOptions();
-        }
+        if (_fileAppender == null) return;
+
+        _fileAppender.File = newLogFilePath;
+        _fileAppender.ActivateOptions();
     }
 
     // 로그 메서드들
