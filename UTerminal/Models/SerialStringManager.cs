@@ -6,18 +6,16 @@ namespace UTerminal.Models;
 
 public class SerialStringManager
 {
-    private readonly SerialMessage[] _messageBuffer;
-    private EncodingBytes _currentFormat;
-    
-    private readonly int _capacity;
-    private int _head;
-    private int _tail;
-    private int _count;
-    
     private static readonly char[] TimeFormatBuffer = new char[14]; // [HH:mm:ss.fff]
     private static readonly ThreadLocal<char[]> SharedBuffer = new(() => new char[4096]); // 문자열 변환을 위한 재사용 가능한 버퍼
-    
+
+    private readonly int _capacity;
+
     private readonly object _lock = new(); // 동기화를 위한 lock 객체
+    private readonly SerialMessage[] _messageBuffer;
+    private int _count;
+    private int _head;
+    private int _tail;
 
     public SerialStringManager(int capacity, EncodingBytes initialFormat = EncodingBytes.ASCII)
     {
@@ -27,9 +25,36 @@ public class SerialStringManager
         _head = 0;
         _tail = 0;
         _count = 0;
-        
+
         _messageBuffer = new SerialMessage[capacity];
-        _currentFormat = initialFormat;
+        CurrentFormat = initialFormat;
+    }
+
+    public EncodingBytes CurrentFormat { get; private set; }
+
+
+    public int Count
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _count;
+            }
+        }
+    }
+
+    public int Capacity => _capacity;
+
+    public bool IsFull
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _count >= _capacity;
+            }
+        }
     }
 
     /// <summary>
@@ -48,7 +73,7 @@ public class SerialStringManager
 
             _messageBuffer[_tail] = message;
             _tail = (_tail + 1) % _capacity;
-            _count++;   
+            _count++;
         }
     }
 
@@ -65,14 +90,14 @@ public class SerialStringManager
     /// <param name="newFormat"></param>
     public void ChangeFormat(EncodingBytes newFormat)
     {
-        if(_currentFormat == newFormat) return;
-        
+        if (CurrentFormat == newFormat) return;
+
         lock (_lock)
         {
-            _currentFormat = newFormat;
+            CurrentFormat = newFormat;
         }
     }
-    
+
     /// <summary>
     /// Returns a string created from <see cref="_messageBuffer"/>
     /// </summary>
@@ -84,13 +109,13 @@ public class SerialStringManager
         SerialMessage[] snapshot;
         int snapshotCount;
         EncodingBytes format;
-        
+
         lock (_lock)
         {
             snapshot = new SerialMessage[_count];
             snapshotCount = _count;
-            format = _currentFormat;
-            
+            format = CurrentFormat;
+
             var index = _head;
             for (var i = 0; i < _count; i++)
             {
@@ -100,7 +125,7 @@ public class SerialStringManager
         }
 
         var localBuilder = new StringBuilder(_capacity * 64);
-        
+
         var currentIndex = 0;
         for (var i = 0; i < snapshotCount; i++)
         {
@@ -109,7 +134,7 @@ public class SerialStringManager
                 .Append(' ')
                 .Append(FormatData(snapshot[currentIndex].Data, format))
                 .AppendLine();
-            
+
             currentIndex = (currentIndex + 1) % snapshotCount;
         }
 
@@ -130,7 +155,7 @@ public class SerialStringManager
         buffer[6] = ':';
         WriteDigits(time.Second, buffer, 7);
         buffer[9] = '.';
-        
+
         int ms = time.Millisecond;
         buffer[10] = (char)('0' + ms / 100);
         buffer[11] = (char)('0' + (ms / 10) % 10);
@@ -144,7 +169,7 @@ public class SerialStringManager
         buffer[startIndex + 1] = (char)('0' + (value % 10));
     }
 
-    
+
     /// <summary>
     /// Convert byte to string by format
     /// </summary>
@@ -178,7 +203,7 @@ public class SerialStringManager
             buffer = new char[charCount];
             SharedBuffer.Value = buffer;
         }
-        
+
         encoding.GetChars(data, 0, data.Length, buffer, 0);
         return new string(buffer, 0, charCount);
     }
@@ -214,30 +239,5 @@ public class SerialStringManager
     private static char GetHexChar(int value)
     {
         return (char)(value < 10 ? '0' + value : 'A' + (value - 10));
-    }
-
-    
-    public int Count
-    {
-        get
-        {
-            lock (_lock)
-            {
-                return _count;
-            }
-        }
-    }
-
-    public int Capacity => _capacity;
-
-    public bool IsFull
-    {
-        get
-        {
-            lock (_lock)
-            {
-                return _count >= _capacity;
-            }
-        }
     }
 }
