@@ -210,6 +210,7 @@ public class MainViewModel : ViewModelBase
 
     #region Interactions
 
+    // Interactions for selecting folders
     private Interaction<string?, string?> _selectFolderInteraction;
     public Interaction<string?, string?> SelectFolderInteraction => _selectFolderInteraction;
 
@@ -390,8 +391,12 @@ public class MainViewModel : ViewModelBase
     }
 
 
+    /// <summary>
+    /// Change Log Path on Click Button
+    /// </summary>
     private async Task OnSelectSerialLogFolder_Click()
     {
+        // Get folder path when click folder
         var result = await _selectFolderInteraction.Handle("");
 
         if (!string.IsNullOrEmpty(result))
@@ -414,6 +419,7 @@ public class MainViewModel : ViewModelBase
     {
         foreach (var message in messages)
         {
+            // If enabled logging.
             if (IsSerialLogging)
             {
                 LogSerialData(message);
@@ -467,6 +473,10 @@ public class MainViewModel : ViewModelBase
     }
 
 
+    /// <summary>
+    /// Save serial message
+    /// </summary>
+    /// <param name="message"></param>
     private void LogSerialData(SerialMessage message)
     {
         _serialLogger.Info(message.ToString(_serialStringManager.CurrentFormat, false));

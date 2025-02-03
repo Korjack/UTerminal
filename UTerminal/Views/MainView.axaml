@@ -511,6 +511,7 @@
             </Panel>
             <!-- Custom Baudrate -->
 
+            <!-- For logging serial data -->
             <Panel>
                 <Border BorderBrush="Gray" BorderThickness="2" Padding="5">
                     <StackPanel Margin="0, 8, 0, 0">
@@ -538,6 +539,7 @@
                            Margin="0,-10,0,0"
                            Padding="5" />
             </Panel>
+            <!-- For logging serial data -->
 
         </StackPanel>
         <!-- 시리얼 데이터 뷰 옵션 -->

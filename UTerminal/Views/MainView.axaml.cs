@@ -14,6 +14,7 @@ public partial class MainView : ReactiveUserControl<MainViewModel>
     {
         InitializeComponent();
 
+        // Folder Interaction Handler
         this.WhenActivated(d => { d(ViewModel!.SelectFolderInteraction.RegisterHandler(InteractionHandler)); });
     }
 
@@ -36,6 +37,9 @@ public partial class MainView : ReactiveUserControl<MainViewModel>
         }
     }
 
+    /// <summary>
+    /// Folder sweep as instructed in the Avalonia UI sample
+    /// </summary>
     private async Task InteractionHandler(IInteractionContext<string?, string?> context)
     {
         // Get our parent top level control in order to get the needed service (in our sample the storage provider. Can also be the clipboard etc.)

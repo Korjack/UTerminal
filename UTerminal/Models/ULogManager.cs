@@ -11,11 +11,20 @@ public class ULogManager
     private readonly ILog _log;
     private RollingFileAppender? _fileAppender;
 
+    /// <summary>
+    /// Create a log manager with a log type.
+    /// </summary>
+    /// <param name="logType">[<see cref="string"/>] Log type</param>
     public ULogManager(string logType)
     {
         _log = LogManager.GetLogger(logType);
     }
 
+    /// <summary>
+    /// Create a log manager with a log type.
+    /// </summary>
+    /// <param name="logType">[<see cref="string"/>] Log type</param>
+    /// <param name="newConfig">[<see cref="LogConfig"/>] Customised log settings.</param>
     public ULogManager(string logType, LogConfig newConfig)
     {
         _log = LogManager.GetLogger(logType);
@@ -29,6 +38,10 @@ public class ULogManager
         ConfigureLogging(newConfig);
     }
 
+    /// <summary>
+    /// Set up logs from settings.
+    /// </summary>
+    /// <param name="config">[<see cref="LogConfig"/>] If you have customised settings</param>
     private void ConfigureLogging(LogConfig config)
     {
         Hierarchy hierarchy = (Hierarchy)LogManager.GetRepository();
@@ -63,6 +76,10 @@ public class ULogManager
         }
     }
 
+    /// <summary>
+    /// Change the location of the logfile to be saved.
+    /// </summary>
+    /// <param name="newLogFilePath">[<see cref="string"/>]Folder path</param>
     public void ChangeLogFilePath(string newLogFilePath)
     {
         if (_fileAppender == null) return;
@@ -71,7 +88,6 @@ public class ULogManager
         _fileAppender.ActivateOptions();
     }
 
-    // 로그 메서드들
     public void Debug(string message) => _log.Debug(message);
     public void Info(string message) => _log.Info(message);
     public void Warn(string message) => _log.Warn(message);
