@@ -70,7 +70,7 @@ public class MainViewModel : ViewModelBase
     public delegate Task SendSerialDataDelegate(string data);
 
     private string _lastErrorMessage = "When serial error appear, updated only latest message here";
-    private bool _isSerialLogging = false;
+    private bool _isSerialLogging;
 
     #endregion
 
@@ -98,6 +98,12 @@ public class MainViewModel : ViewModelBase
     {
         get => _lastErrorMessage;
         private set => this.RaiseAndSetIfChanged(ref _lastErrorMessage, value);
+    }
+
+    public bool IsSerialLogging
+    {
+        get => _isSerialLogging;
+        set => this.RaiseAndSetIfChanged(ref _isSerialLogging, value);
     }
 
     public string SerialLogFilePath { get; set; } = AppContext.BaseDirectory;
@@ -370,7 +376,7 @@ public class MainViewModel : ViewModelBase
     {
         var b = sender as Button;
 
-        if (!_isSerialLogging)
+        if (!IsSerialLogging)
         {
             _serialLogger = new ULogManager("SerialDataReceived", new LogConfig
             {
@@ -379,8 +385,8 @@ public class MainViewModel : ViewModelBase
             });
         }
 
-        _isSerialLogging = !_isSerialLogging;
-        b!.Content = _isSerialLogging ? "Stop Data Logging" : "Start Data Logging";
+        IsSerialLogging = !IsSerialLogging;
+        b!.Content = IsSerialLogging ? "Stop Data Logging" : "Start Data Logging";
     }
 
 
@@ -391,7 +397,7 @@ public class MainViewModel : ViewModelBase
         if (!string.IsNullOrEmpty(result))
         {
             SerialLogFilePath = result;
-            _serialLogger.ChangeLogFilePath(SerialLogFilePath);
+            _serialLogger.ChangeLogFilePath(SerialLogFilePath); // Change path
         }
     }
 
@@ -408,7 +414,7 @@ public class MainViewModel : ViewModelBase
     {
         foreach (var message in messages)
         {
-            if (_isSerialLogging)
+            if (IsSerialLogging)
             {
                 LogSerialData(message);
             }

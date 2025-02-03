@@ -521,6 +521,7 @@
                                 Command="{Binding SerialLoggingCommand}"
                                 CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
                         <Button Content="Change Log Path"
+                                IsEnabled="{Binding !IsSerialLogging}"
                                 FontSize="10"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center"
