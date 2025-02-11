@@ -47,7 +47,7 @@ public class SerialDevice : IDisposable
     #region Tokens
 
     private CancellationTokenSource _serialTokenSource = new ();
-    private CancellationTokenSource _channelTokenSource = new();
+    private readonly CancellationTokenSource _channelTokenSource = new();
 
     #endregion
     
@@ -77,17 +77,22 @@ public class SerialDevice : IDisposable
     {
         _settings = new SerialSettings();
         _parser = new SerialDataParser();
+        
+        Task.Run(async () => await ProcessMessageAsync(_channelTokenSource));
     }
     
     public SerialDevice(SerialSettings settings)
     {
         _settings = settings;
         _parser = new SerialDataParser();
+        
+        Task.Run(async () => await ProcessMessageAsync(_channelTokenSource));
     }
     
     public void Dispose()
     {
         Disconnect();
+        _channelTokenSource.Cancel();       // Cancel the message channel
         _serialPort?.Dispose();
     }
 
@@ -105,6 +110,7 @@ public class SerialDevice : IDisposable
 
         try
         {
+            // Set SerialPort
             _serialPort = new SerialPort(
                 _settings.PortPath,
                 (int)_settings.BaudRate,
@@ -113,18 +119,19 @@ public class SerialDevice : IDisposable
                 (StopBits)_settings.StopBits
             );
 
+            // Renew Token
             if (_serialTokenSource.IsCancellationRequested) _serialTokenSource = new CancellationTokenSource();
-            if (_channelTokenSource.IsCancellationRequested) _channelTokenSource = new CancellationTokenSource();
 
             _serialPort.Open();
-
-            Task.Run(async () => await ProcessMessageAsync(_channelTokenSource, _serialTokenSource.Token));
+            
+            // Data Receiver Run
             Task.Run(async () => await SerialPort_DataReceivedAsync(_serialTokenSource.Token));
 
             return true;
         }
         catch (Exception e)
         {
+            // If error occured, send error message
             _ = OnMessageReceived(new SerialMessage 
             { 
                 ErrorText = e.Message,
@@ -140,11 +147,10 @@ public class SerialDevice : IDisposable
     /// </summary>
     public void Disconnect()
     {
-        if (_serialPort?.IsOpen == true)
-        {
-            _serialPort.Close();
-            _serialTokenSource.Cancel();
-        }
+        if (_serialPort?.IsOpen != true) return;
+        
+        _serialPort.Close();
+        _serialTokenSource.Cancel();
     }
 
     #endregion
@@ -311,30 +317,25 @@ public class SerialDevice : IDisposable
     /// <summary>
     /// Asynchronously processes message data periodically when connecting to a serial connection.
     /// </summary>
-    private async Task ProcessMessageAsync(CancellationTokenSource channelTokenSource, CancellationToken serialToken)
+    private async Task ProcessMessageAsync(CancellationTokenSource channelTokenSource) 
     {
-        var queueToken = channelTokenSource.Token;
+        var channelToken = channelTokenSource.Token;
         var reader = _messageChannel.Reader;
 
         try 
         {
-            while (!queueToken.IsCancellationRequested)
+            while (!channelToken.IsCancellationRequested)
             {
-                var message = await reader.ReadAsync(queueToken);
+                var message = await reader.ReadAsync(channelToken);
                 await OnMessageReceived(message);
-
-                if (serialToken.IsCancellationRequested && reader.Count == 0)
-                {
-                    await channelTokenSource.CancelAsync();
-                }
             }
         }
         catch (OperationCanceledException e)
         {
             // 정상적인 종료 처리
-            await OnMessageReceived(new SerialMessage
+            await OnMessageReceived(new SerialMessage 
             {
-                ErrorText = e.Message,
+                ErrorText = "Message Channel Canceled.",
                 Timestamp = DateTime.Now,
                 Type = SerialMessage.MessageType.Error
             });
