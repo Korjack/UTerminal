@@ -162,7 +162,7 @@ public class MainViewModel : ViewModelBase
         // Process error message
         serialDataStream
             .Where(x => x.Type == SerialMessage.MessageType.Error)
-            .Do(UpdateErrorMessage);
+            .Subscribe(UpdateErrorMessage);
     }
 
     /// <summary>

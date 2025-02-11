@@ -55,7 +55,7 @@
                         Content="{Binding !IsConnected,
                         Converter={StaticResource BoolToStringConverter},
                         ConverterParameter='Connect,Disconnect'}" />
-                <Button Command="{Binding ReScanCommand}" IsEnabled="{Binding !IsConnected}" Content="Recan" />
+                <Button Command="{Binding ReScanCommand}" IsEnabled="{Binding !IsConnected}" Content="ReScan" />
                 <Button Command="{Binding QuitCommand}">Quit</Button>
             </StackPanel>
             <!-- 기본 메뉴 뷰 -->
