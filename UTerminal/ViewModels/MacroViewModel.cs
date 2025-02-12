@@ -108,8 +108,7 @@ public class MacroSettings
 public class MacroViewModel : ViewModelBase
 {
     #region Fields
-
-    private readonly MainViewModel.SendSerialDataDelegate _sendSerialData;
+    
     private readonly MacroSettings _settings;
 
     #endregion
@@ -127,10 +126,8 @@ public class MacroViewModel : ViewModelBase
     /// Initialize Window
     /// </summary>
     /// <param name="serialDataDelegate">(<see cref="MainViewModel.SendSerialDataDelegate"/>) Connects a function with a predefined transmission.</param>
-    public MacroViewModel(MainViewModel.SendSerialDataDelegate serialDataDelegate)
+    public MacroViewModel()
     {
-        _sendSerialData = serialDataDelegate;           // Set serial write function
-        
         // Commands Init
         var command = ReactiveCommand.CreateFromTask<string>(SendMacroDataAsync);
         MacroClosingCommand = ReactiveCommand.Create(WindowClosing);
@@ -172,7 +169,7 @@ public class MacroViewModel : ViewModelBase
     /// <param name="data">Macro TextBox <see cref="string"/></param>
     private async Task SendMacroDataAsync(string data)
     {
-        await _sendSerialData(data);
+        
     }
     
     #endregion

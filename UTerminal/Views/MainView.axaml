@@ -63,7 +63,7 @@
             <!-- 컴포트 선택 영역 -->
             <Panel IsEnabled="{Binding !IsConnected}">
                 <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
-                    <ItemsControl ItemsSource="{Binding DefaultComPortList}">
+                    <ItemsControl ItemsSource="{Binding PortManager.AvailablePorts}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <UniformGrid Columns="2"></UniformGrid>
@@ -71,7 +71,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <RadioButton Content="{Binding Text}"
+                                <RadioButton Content="{Binding Name}"
                                              GroupName="COMPortGroup"
                                              IsChecked="{Binding IsSelected}"
                                              IsEnabled="{Binding IsEnabled}">
@@ -118,7 +118,7 @@
                                         <MultiBinding Converter="{StaticResource CheckSameValueConverter}">
                                             <Binding />
                                             <Binding
-                                                Path="$parent[Window].((vm:MainViewModel)DataContext).SerialSettings.BaudRate" />
+                                                Path="$parent[Window].((vm:MainViewModel)DataContext).ConnectionConfig.BaudRate" />
                                         </MultiBinding>
                                     </RadioButton.IsChecked>
 
@@ -163,7 +163,7 @@
                                         <MultiBinding Converter="{StaticResource CheckSameValueConverter}">
                                             <Binding />
                                             <Binding
-                                                Path="$parent[Window].((vm:MainViewModel)DataContext).SerialSettings.Parity" />
+                                                Path="$parent[Window].((vm:MainViewModel)DataContext).ConnectionConfig.Parity" />
                                         </MultiBinding>
                                     </RadioButton.IsChecked>
 
@@ -208,7 +208,7 @@
                                         <MultiBinding Converter="{StaticResource CheckSameValueConverter}">
                                             <Binding />
                                             <Binding
-                                                Path="$parent[Window].((vm:MainViewModel)DataContext).SerialSettings.DataBits" />
+                                                Path="$parent[Window].((vm:MainViewModel)DataContext).ConnectionConfig.DataBits" />
                                         </MultiBinding>
                                     </RadioButton.IsChecked>
 
@@ -253,7 +253,7 @@
                                         <MultiBinding Converter="{StaticResource CheckSameValueConverter}">
                                             <Binding />
                                             <Binding
-                                                Path="$parent[Window].((vm:MainViewModel)DataContext).SerialSettings.StopBits" />
+                                                Path="$parent[Window].((vm:MainViewModel)DataContext).ConnectionConfig.StopBits" />
                                         </MultiBinding>
                                     </RadioButton.IsChecked>
 
@@ -398,7 +398,7 @@
                     <NumericUpDown VerticalAlignment="Center"
                                    ShowButtonSpinner="False"
                                    FormatString="0"
-                                   Text="{Binding SerialSettings.PacketSizeText, UpdateSourceTrigger=LostFocus}"
+                                   Text="{Binding RuntimeConfig.PacketSizeText, UpdateSourceTrigger=LostFocus}"
                                    HorizontalContentAlignment="Center" />
                 </Border>
                 <TextBlock Text="Packet Size"
@@ -423,7 +423,7 @@
                             <TextBox VerticalContentAlignment="Center"
                                      HorizontalContentAlignment="Center"
                                      MaxLength="2"
-                                     Text="{Binding SerialSettings.CustomSTX, Converter={StaticResource ByteToHexStringConverter}}"
+                                     Text="{Binding RuntimeConfig.CustomStx, Converter={StaticResource ByteToHexStringConverter}}"
                                      KeyDown="CustomStxEtx_OnKeyDown" />
                         </DockPanel>
                         <DockPanel>
@@ -433,7 +433,7 @@
                             <TextBox VerticalContentAlignment="Center"
                                      HorizontalContentAlignment="Center"
                                      MaxLength="2"
-                                     Text="{Binding SerialSettings.CustomETX, Converter={StaticResource ByteToHexStringConverter}}"
+                                     Text="{Binding RuntimeConfig.CustomEtx, Converter={StaticResource ByteToHexStringConverter}}"
                                      KeyDown="CustomStxEtx_OnKeyDown" />
                         </DockPanel>
                     </StackPanel>
@@ -492,7 +492,7 @@
                                      GroupName="BaudRateGroup">
                         </RadioButton>
                         <NumericUpDown
-                            Value="{Binding SerialSettings.BaudRate, Converter={StaticResource NumberToBaudrateConverter}}"
+                            Value="{Binding ConnectionConfig.BaudRate, Converter={StaticResource NumberToBaudrateConverter}}"
                             IsEnabled="{Binding #CustomBaudrateButton.IsChecked}"
                             FormatString="0"
                             ShowButtonSpinner="False"
@@ -512,33 +512,33 @@
             <!-- Custom Baudrate -->
 
             <!-- For logging serial data -->
-            <Panel>
-                <Border BorderBrush="Gray" BorderThickness="2" Padding="5">
-                    <StackPanel Margin="0, 8, 0, 0">
-                        <Button Content="Start Data Logging"
-                                FontSize="10"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Center"
-                                Command="{Binding SerialLoggingCommand}"
-                                CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-                        <Button Content="Change Log Path"
-                                IsEnabled="{Binding !IsSerialLogging}"
-                                FontSize="10"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Center"
-                                Command="{Binding SetSerialLogPathCommand}" />
-                    </StackPanel>
-                </Border>
-
-                <TextBlock Text="Logging"
-                           FontSize="10"
-                           Background="White"
-                           Foreground="Black"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Top"
-                           Margin="0,-10,0,0"
-                           Padding="5" />
-            </Panel>
+            <!-- <Panel> -->
+            <!--     <Border BorderBrush="Gray" BorderThickness="2" Padding="5"> -->
+            <!--         <StackPanel Margin="0, 8, 0, 0"> -->
+            <!--             <Button Content="Start Data Logging" -->
+            <!--                     FontSize="10" -->
+            <!--                     HorizontalAlignment="Stretch" -->
+            <!--                     HorizontalContentAlignment="Center" -->
+            <!--                     Command="{Binding SerialLoggingCommand}" -->
+            <!--                     CommandParameter="{Binding RelativeSource={RelativeSource Self}}" /> -->
+            <!--             <Button Content="Change Log Path" -->
+            <!--                     IsEnabled="{Binding !IsSerialLogging}" -->
+            <!--                     FontSize="10" -->
+            <!--                     HorizontalAlignment="Stretch" -->
+            <!--                     HorizontalContentAlignment="Center" -->
+            <!--                     Command="{Binding SetSerialLogPathCommand}" /> -->
+            <!--         </StackPanel> -->
+            <!--     </Border> -->
+            <!-- -->
+            <!--     <TextBlock Text="Logging" -->
+            <!--                FontSize="10" -->
+            <!--                Background="White" -->
+            <!--                Foreground="Black" -->
+            <!--                HorizontalAlignment="Center" -->
+            <!--                VerticalAlignment="Top" -->
+            <!--                Margin="0,-10,0,0" -->
+            <!--                Padding="5" /> -->
+            <!-- </Panel> -->
             <!-- For logging serial data -->
 
         </StackPanel>
@@ -591,22 +591,22 @@
         <!-- 데이터 송신 -->
 
         <!-- 상태표시줄 -->
-        <Grid Grid.Row="4" ColumnDefinitions="*,Auto">
-
-            <!-- Last Error Message -->
-            <Border Grid.Column="0"
-                    Background="Gray" Opacity="0.3"
-                    Padding="10, 0" Margin="0, 0, 5, 0">
-                <TextBlock Text="{Binding LastErrorMessage}" />
-            </Border>
-            <!-- Last Error Message -->
-
-            <!-- 데이터 전송 속도 -->
-            <TextBlock Grid.Column="1"
-                       TextAlignment="Center"
-                       Text="{Binding DataRate, StringFormat='Data Rate: {0:N2} Hz'}" />
-            <!-- 데이터 전송 속도 -->
-        </Grid>
+        <!-- <Grid Grid.Row="4" ColumnDefinitions="*,Auto"> -->
+        <!-- -->
+        <!--     ~1~ Last Error Message @1@ -->
+        <!--     <Border Grid.Column="0" -->
+        <!--             Background="Gray" Opacity="0.3" -->
+        <!--             Padding="10, 0" Margin="0, 0, 5, 0"> -->
+        <!--         <TextBlock Text="{Binding LastErrorMessage}" /> -->
+        <!--     </Border> -->
+        <!--     ~1~ Last Error Message @1@ -->
+        <!-- -->
+        <!--     ~1~ 데이터 전송 속도 @1@ -->
+        <!--     <TextBlock Grid.Column="1" -->
+        <!--                TextAlignment="Center" -->
+        <!--                Text="{Binding DataRate, StringFormat='Data Rate: {0:N2} Hz'}" /> -->
+        <!--     ~1~ 데이터 전송 속도 @1@ -->
+        <!-- </Grid> -->
         <!-- 상태표시줄 -->
     </Grid>
 
