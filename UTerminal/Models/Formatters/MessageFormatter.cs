@@ -1,7 +1,8 @@
 using System;
 using System.Text;
 using System.Threading;
-using UTerminal.Models.Interfaces;
+using UTerminal.Models.Messages.Interfaces;
+using UTerminal.Models.Serial;
 
 namespace UTerminal.Models.Formatters;
 
@@ -11,11 +12,10 @@ namespace UTerminal.Models.Formatters;
 public class MessageFormatter
 {
     private static readonly ThreadLocal<char[]> SharedBuffer = new(() => new char[4096]);
-    private readonly TimeFormatter _timeFormatter;
 
-    public MessageFormatter(TimeFormatter timeFormatter)
+    public MessageFormatter()
     {
-        _timeFormatter = timeFormatter ?? throw new ArgumentNullException(nameof(timeFormatter));
+        
     }
 
     /// <summary>
@@ -25,17 +25,17 @@ public class MessageFormatter
     /// <param name="count">Number of messages to process</param>
     /// <param name="format">Encoding format to use</param>
     /// <returns>Formatted string containing all messages</returns>
-    public string FormatMessages(ISerialMessage[] messages, int count, SerialConstants.EncodingBytes format)
+    public string FormatMessages(ISerialMessage[] messages, EncodingBytes format)
     {
-        var builder = new StringBuilder(count * 64);
+        var builder = new StringBuilder(messages.Length * 64);
         var timeBuffer = new char[14];
 
-        for (var i = 0; i < count; i++)
+        foreach (var msg in messages)
         {
-            _timeFormatter.FormatTime(messages[i].Timestamp, timeBuffer);
+            TimeFormatter.FormatTime(msg.Timestamp, timeBuffer);
             builder.Append(timeBuffer)
                 .Append(' ')
-                .Append(FormatData(messages[i].Data, format))
+                .Append(FormatData(msg.Data, format))
                 .AppendLine();
         }
 
@@ -48,13 +48,13 @@ public class MessageFormatter
     /// <param name="data">Raw byte data to format</param>
     /// <param name="format">Encoding format to use</param>
     /// <returns>Formatted string representation of the data</returns>
-    public string FormatData(byte[] data, SerialConstants.EncodingBytes format)
+    public string FormatData(byte[] data, EncodingBytes format)
     {
         return format switch
         {
-            SerialConstants.EncodingBytes.ASCII => StringFromBufferOptimized(data, Encoding.ASCII),
-            SerialConstants.EncodingBytes.HEX => HexFromBufferOptimized(data),
-            SerialConstants.EncodingBytes.UTF8 => StringFromBufferOptimized(data, Encoding.UTF8),
+            EncodingBytes.ASCII => StringFromBufferOptimized(data, Encoding.ASCII),
+            EncodingBytes.HEX => HexFromBufferOptimized(data),
+            EncodingBytes.UTF8 => StringFromBufferOptimized(data, Encoding.UTF8),
             _ => throw new ArgumentException($"Unsupported format: {format}")
         };
     }

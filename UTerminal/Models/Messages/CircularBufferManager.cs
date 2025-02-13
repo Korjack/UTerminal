@@ -1,37 +1,31 @@
 using System;
 using UTerminal.Models.Formatters;
-using UTerminal.Models.Interfaces;
+using UTerminal.Models.Messages.Interfaces;
 
-namespace UTerminal.Models;
+namespace UTerminal.Models.Messages;
 
-public class CircularBufferManager : IBufferManager
+public class CircularBufferManager : IBufferManager<ISerialMessage>
 {
     private readonly ISerialMessage[] _messageBuffer;
     private readonly object _lock = new();
-
+    
     private int _count;
     private int _head;
     private int _tail;
-
-    private readonly TimeFormatter _timeFormatter;
-    private readonly MessageFormatter _messageFormatter;
-
-
+    
     public CircularBufferManager(int capacity)
     {
         if (capacity <= 0)
             throw new ArgumentException("Capacity must be greater than 0", nameof(capacity));
 
         Capacity = capacity;
+        
         _messageBuffer = new ISerialMessage[capacity];
-        _timeFormatter = new TimeFormatter();
-        _messageFormatter = new MessageFormatter(_timeFormatter);
 
         _count = 0;
         _head = 0;
         _tail = 0;
     }
-    
     
     public void Add(ISerialMessage message)
     {
@@ -49,27 +43,29 @@ public class CircularBufferManager : IBufferManager
         }
     }
 
-    public string GetCurrentString(SerialConstants.EncodingBytes format)
+    public ISerialMessage[] GetSnapshot()
     {
-        if (_count == 0) return string.Empty;
-
-        ISerialMessage[] snapshot;
-        int snapshotCount;
+        if (_count == 0) return [];
 
         lock (_lock)
         {
-            snapshot = new ISerialMessage[_count];
-            snapshotCount = _count;
+            // Create Buffer
+            var snapshot = new ISerialMessage[_count];
 
-            var index = _head;
-            for (var i = 0; i < _count; i++)
+            // Check that the current buffer size does not exceed its capacity
+            if (_head + _count <= Capacity)
             {
-                snapshot[i] = _messageBuffer[index];
-                index = (index + 1) % Capacity;
+                _messageBuffer.AsSpan(_head, _count).CopyTo(snapshot);
             }
+            else
+            {
+                var part = Capacity - _head;
+                _messageBuffer.AsSpan(_head, part).CopyTo(snapshot);
+                _messageBuffer.AsSpan(0, _count - part).CopyTo(snapshot.AsSpan(part));
+            }
+            
+            return snapshot;
         }
-
-        return _messageFormatter.FormatMessages(snapshot, snapshotCount, format);
     }
 
     public void Clear()

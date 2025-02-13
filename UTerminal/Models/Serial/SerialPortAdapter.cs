@@ -5,25 +5,29 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using DynamicData.Binding;
 using ReactiveUI;
-using UTerminal.Models.Interfaces;
+using UTerminal.Models.Messages;
+using UTerminal.Models.Messages.Interfaces;
+using UTerminal.Models.Messages.Types;
+using UTerminal.Models.Serial.Interfaces;
 
-namespace UTerminal.Models;
+namespace UTerminal.Models.Serial;
 
 public class SerialPortAdapter : ISerialPort
 {
+    // Basic Serial
     private readonly SerialPort _port;
     private SerialConnectionConfiguration _connectionConfig;
     private SerialRuntimeConfiguration _runtimeConfig;
     
+    // Serial Data Handle
     private readonly Channel<ISerialMessage> _msgChannel;
-    public ChannelReader<ISerialMessage> GetReadChannel() => _msgChannel.Reader;
-    private CancellationTokenSource _serialToken;
+    private readonly List<byte> _bufferList = [];
     
-    private readonly List<byte> _bufferList;
+    private CancellationTokenSource _serialToken = null!;
     private bool _canBufferAdd;
 
+    public ChannelReader<ISerialMessage> GetReadChannel() => _msgChannel.Reader;
     public bool IsConnected => _port?.IsOpen ?? false;
 
     public SerialPortAdapter(SerialConnectionConfiguration connectionConfig, SerialRuntimeConfiguration runtimeConfig)
@@ -31,16 +35,18 @@ public class SerialPortAdapter : ISerialPort
         _port = new SerialPort();
         _connectionConfig = connectionConfig;
         _runtimeConfig = runtimeConfig;
+        
+        // Init Channel
         _msgChannel = Channel.CreateUnbounded<ISerialMessage>(new UnboundedChannelOptions
         {
             SingleReader = true,
             SingleWriter = true
         });
-
-        _bufferList = new List<byte>();
         
+        // Set default setting on init
         UpdatePortConfig();
-
+        
+        // When connection setting changed
         _connectionConfig.WhenAnyValue(
             x => x.PortName,
             x => x.BaudRate,
@@ -48,16 +54,12 @@ public class SerialPortAdapter : ISerialPort
             x => x.DataBits,
             x => x.StopBits)
             .Subscribe(_ => UpdatePortConfig());
-
-        // _runtimeConfig.WhenAnyValue(
-        //     x => x.ReadMode,
-        //     x => x.CustomStx,
-        //     x => x.CustomEtx,
-        //     x => x.PacketSize)
-        //     .Subscribe(_ => UpdateRuntimeConfig());
     }
     
 
+    /// <summary>
+    /// Update port config from connection setting
+    /// </summary>
     private void UpdatePortConfig()
     {
         if (!IsConnected)
@@ -70,6 +72,10 @@ public class SerialPortAdapter : ISerialPort
         }
     }
     
+    /// <summary>
+    /// Open serial port
+    /// </summary>
+    /// <returns>true if successfully opened</returns>
     public bool Open()
     {
         if (IsConnected) return false;
@@ -91,6 +97,10 @@ public class SerialPortAdapter : ISerialPort
         return false;
     }
 
+    /// <summary>
+    /// Cloase serial port
+    /// </summary>
+    /// <returns>true if successfully closed</returns>
     public bool Close()
     {
         if(!IsConnected) return false;
@@ -101,6 +111,12 @@ public class SerialPortAdapter : ISerialPort
         return true;
     }
 
+    
+    /// <summary>
+    /// Writes serial data asynchronously. 
+    /// </summary>
+    /// <param name="data"><see cref="byte"/>[] - serial data</param>
+    /// <returns>true if successfully write</returns>
     public async Task<bool> WriteAsync(byte[] data)
     {
         if (!IsConnected) return false;
@@ -118,6 +134,10 @@ public class SerialPortAdapter : ISerialPort
         return false;
     }
 
+    /// <summary>
+    /// Manually read serial data using async. The read serial data is updated on the channel.
+    /// </summary>
+    /// <param name="token">Token to stop loop</param>
     public async Task StartReading(CancellationToken token)
     {
         try

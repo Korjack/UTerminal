@@ -1,22 +1,18 @@
 using System;
 using System.Globalization;
 using System.Text;
-using UTerminal.Models.Interfaces;
+using UTerminal.Models.Messages.Interfaces;
+using UTerminal.Models.Messages.Types;
+using UTerminal.Models.Serial;
 
-namespace UTerminal.Models;
-
-public enum MessageType
-{
-    Received,
-    Sent,
-    Error
-}
+namespace UTerminal.Models.Messages;
 
 public class SerialMessage : ISerialMessage
 {
     public byte[] Data { get; set; } = [];
     public int DataSize { get; set; } = 0;
-    public string ErrorText { get; set; } = String.Empty;
+    
+    public string ErrorText { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; }
     public MessageType Type { get; set; }
 
@@ -26,15 +22,15 @@ public class SerialMessage : ISerialMessage
             $"[{Timestamp.ToString(CultureInfo.CurrentCulture)}][Type: {Type}][Size: {DataSize}]  {BitConverter.ToString(Data).Replace("-", " ")}";
     }
 
-    public string ToString(SerialConstants.EncodingBytes encoding, bool showDate = true)
+    public string ToString(EncodingBytes encoding, bool showDate = true)
     {
         var header =
             $"{(showDate ? $"[{Timestamp.ToString(CultureInfo.CurrentCulture)}]" : string.Empty)}[Type: {Type}][Size: {DataSize}]  ";
         return encoding switch
         {
-            SerialConstants.EncodingBytes.ASCII => header + Encoding.ASCII.GetString(Data),
-            SerialConstants.EncodingBytes.HEX => header + BitConverter.ToString(Data).Replace("-", " "),
-            SerialConstants.EncodingBytes.UTF8 => header + Encoding.UTF8.GetString(Data),
+            EncodingBytes.ASCII => header + Encoding.ASCII.GetString(Data),
+            EncodingBytes.HEX => header + BitConverter.ToString(Data).Replace("-", " "),
+            EncodingBytes.UTF8 => header + Encoding.UTF8.GetString(Data),
             _ => throw new ArgumentException("Unsupported format")
         };
     }

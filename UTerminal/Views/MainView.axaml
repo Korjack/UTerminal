@@ -553,7 +553,7 @@
                                      FontWeight="Light">
 
                 <Interaction.Behaviors>
-                    <behaviors:DocumentTextBindingBehavior Text="{Binding SerialStringData, Mode=OneWay}"
+                    <behaviors:DocumentTextBindingBehavior Text="{Binding ReceivedSerialData, Mode=OneWay}"
                                                            AutoScrollToEnd="True" />
                 </Interaction.Behaviors>
 

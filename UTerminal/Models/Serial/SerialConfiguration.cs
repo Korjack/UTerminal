@@ -4,10 +4,13 @@ using System.ComponentModel;
 using System.IO.Ports;
 using ReactiveUI;
 
-namespace UTerminal.Models;
+namespace UTerminal.Models.Serial;
 
 public class SerialConnectionConfiguration : ReactiveObject
 {
+    /// <summary>
+    /// Default values for serial settings
+    /// </summary>
     public static class Defaults
     {
         public static int BaudRate => 9600;
@@ -17,13 +20,17 @@ public class SerialConnectionConfiguration : ReactiveObject
     }
 
     private string _portName = "COM1";
+    private BaudRateType _baudRate = Defaults.BaudRate;
+    private ParityType _parity = Defaults.Parity;
+    private DataBitsType _dataBits = Defaults.DataBits;
+    private StopBitsType _stopBits = Defaults.StopBits;
+    
     public string PortName
     {
         get => _portName;
         set => this.RaiseAndSetIfChanged(ref _portName, value);
     }
     
-    private BaudRateType _baudRate = Defaults.BaudRate;
     public BaudRateType BaudRate
     {
         get => _baudRate;
@@ -35,21 +42,19 @@ public class SerialConnectionConfiguration : ReactiveObject
         }
     }
     
-    private ParityType _parity = Defaults.Parity;
     public ParityType Parity
     {
         get => _parity;
         set => this.RaiseAndSetIfChanged(ref _parity, value);
     }
     
-    private DataBitsType _dataBits = Defaults.DataBits;
+    
     public DataBitsType DataBits
     {
         get => _dataBits;
         set => this.RaiseAndSetIfChanged(ref _dataBits, value);
     }
     
-    private StopBitsType _stopBits = Defaults.StopBits;
     public StopBitsType StopBits
     {
         get => _stopBits;
@@ -57,36 +62,39 @@ public class SerialConnectionConfiguration : ReactiveObject
     }
 }
 
+
 public class SerialRuntimeConfiguration : ReactiveObject
 {
     private ReadModeType _readMode = ReadModeType.NewLine;
+    private byte _customStx;
+    private byte _customEtx;
+    private int _packetSize;
+    
+    
     public ReadModeType ReadMode
     {
         get => _readMode;
         set => this.RaiseAndSetIfChanged(ref _readMode, value);
     }
-
-    private byte _customStx;
+    
     public byte CustomStx
     {
         get => _customStx;
         set => this.RaiseAndSetIfChanged(ref _customStx, value);
     }
-
-    private byte _customEtx;
+    
     public byte CustomEtx
     {
         get => _customEtx;
         set => this.RaiseAndSetIfChanged(ref _customEtx, value);
     }
-
-    private int _packetSize;
-
+    
     public int PacketSize
     {
         get => _packetSize;
         set => this.RaiseAndSetIfChanged(ref _packetSize, value);
     }
+    
     public string PacketSizeText
     {
         get => _packetSize.ToString();
@@ -237,6 +245,9 @@ public enum EncodingBytes
     [Description("UTF8")] UTF8 = 2
 }
 
+/// <summary>
+/// Serial Data Read Type
+/// </summary>
 public enum ReadModeType
 {
     NewLine,

@@ -5,7 +5,7 @@ namespace UTerminal.Models.Formatters;
 /// <summary>
 /// Handles formatting of timestamps for serial messages
 /// </summary>
-public class TimeFormatter
+public static class TimeFormatter
 {
     private static readonly char[] TimeFormatBuffer = new char[14]; // [HH:mm:ss.fff]
 
@@ -14,7 +14,7 @@ public class TimeFormatter
     /// </summary>
     /// <param name="time">The DateTime to format</param>
     /// <param name="buffer">The buffer to write the formatted time into</param>
-    public void FormatTime(DateTime time, char[] buffer)
+    public static void FormatTime(DateTime time, char[] buffer)
     {
         buffer[0] = '[';
         WriteDigits(time.Hour, buffer, 1);

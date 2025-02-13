@@ -1,27 +1,30 @@
 using System;
-using System.Collections.Generic;
-using System.IO.Ports;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using UTerminal.Models.Interfaces;
+using UTerminal.Models.Messages.Interfaces;
+using UTerminal.Models.Serial.Interfaces;
 
-namespace UTerminal.Models;
+namespace UTerminal.Models.Serial;
 
 public class SerialService : ISerialService
 {
+    // Basic serial
     private readonly ISerialPort _serialPort;
     private readonly SerialDataParser _parser;
     
+    // Serial message receive event handler
     public event EventHandler<ISerialMessage>? MsgReceived;
-
     private readonly CancellationTokenSource _msgReadToken = new();
+    
+    public bool IsConnected => _serialPort.IsConnected;
     
     public SerialService(SerialConnectionConfiguration connectionConfig, SerialRuntimeConfiguration runtimeConfig)
     {
         _serialPort = new SerialPortAdapter(connectionConfig, runtimeConfig);
         _parser = new SerialDataParser();
 
+        // When message received, Invoke Handler
         Task.Run(async () => await OnMessageReceived());
     }
     
@@ -29,12 +32,12 @@ public class SerialService : ISerialService
     {
         return _serialPort.Open();
     }
-
+    
     public bool Disconnect()
     {
         return _serialPort.Close();
     }
-
+    
     public async Task<bool> WriteAsync(string data)
     {
         if (!_serialPort.IsConnected) return false;
@@ -45,6 +48,9 @@ public class SerialService : ISerialService
         return true;
     }
 
+    /// <summary>
+    /// Monitors if there are any serial messages to read.
+    /// </summary>
     private async Task OnMessageReceived()
     {
         var reader = _serialPort.GetReadChannel();
@@ -66,6 +72,10 @@ public class SerialService : ISerialService
         }
     }
     
+    /// <summary>
+    /// Invoke a function connected to the EventHandler.
+    /// </summary>
+    /// <param name="message"><see cref="ISerialMessage"/></param>
     private Task RaiseEventAsync(ISerialMessage message)
     {
         var handler = MsgReceived;
@@ -82,6 +92,4 @@ public class SerialService : ISerialService
         
         return Task.CompletedTask;
     }
-    
-    public bool IsConnected => _serialPort.IsConnected;
 }
