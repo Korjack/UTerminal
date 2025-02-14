@@ -16,24 +16,27 @@ using UTerminal.Models.Messages.Interfaces;
 using UTerminal.Models.PortManager;
 using UTerminal.Models.Serial;
 using UTerminal.Models.Serial.Interfaces;
+using UTerminal.Models.Utils;
 using UTerminal.Views;
 
 namespace UTerminal.ViewModels;
 
 public class MainViewModel : ViewModelBase
 {
-    private readonly ISerialService _serialService;                             // Serial Connection Management
-    private readonly SerialMsgProcessor _serialMsgProcessor;       // Converts and processes messages of serial message type.
+    private readonly ISerialService _serialService;                     // Serial Connection Management
+    private readonly SerialMsgProcessor _serialMsgProcessor;            // Converts and processes messages of serial message type.
     
     public SerialConnectionConfiguration ConnectionConfig { get; }      // Settings closely related to serial connection
     public SerialRuntimeConfiguration RuntimeConfig { get; }            // Settings can be changed regardless of connection
-    
+
+    private ULogManager _serialLogManager = null!;                      // Log manager
     public PortManager PortManager { get; }                             // Port Manager for seek port path or set
 
     #region Fields
 
     private bool _isConnected;                                  // Serial connection status
     private string _receivedSerialData = string.Empty;          // Convert to string from serial message
+    private bool _isSerialLogging;                              // Serial data logging status
 
     #endregion
 
@@ -50,8 +53,15 @@ public class MainViewModel : ViewModelBase
         private set => this.RaiseAndSetIfChanged(ref _isConnected, value);
     }
 
-    #endregion
+    public bool IsSerialLogging
+    {
+        get => _isSerialLogging;
+        private set => this.RaiseAndSetIfChanged(ref _isSerialLogging, value);
+    }
     
+    public string SerialLogFilePath { get; set; } = AppContext.BaseDirectory;
+
+    #endregion
     
     public MainViewModel()
     {
@@ -67,7 +77,6 @@ public class MainViewModel : ViewModelBase
         InitializeSerialCommands();
         InitInteractions();
     }
-    
     
     #region Obserable
 
@@ -130,20 +139,40 @@ public class MainViewModel : ViewModelBase
 
     #region Commands Init
 
-    public ICommand QuitCommand { get; private set; } = null!;
-    public ICommand ConnectCommand { get; set; } = null!;
-    public ICommand ReScanCommand { get; set; } = null!;
+    #region Default Main Menu
 
-    public ICommand ComPortRadioChangedCommand { get; private set; } = null!;
-    public ICommand SerialSettingChangedCommand { get; private set; } = null!;
-    public ICommand EncodingBytesChangedCommand { get; private set; } = null!;
-    public ICommand SendSerialDataCommand { get; private set; } = null!;
-    public ICommand OpenMacroWindowCommand { get; private set; } = null!;
-    public ICommand ReadTypeChangedCommand { get; private set; } = null!;
+    public ICommand QuitCommand { get; private set; } = null!;          // Quit Program
+    public ICommand ConnectCommand { get; set; } = null!;               // Connect Serial
+    public ICommand ReScanCommand { get; set; } = null!;                // Scan Port List
 
-    public ICommand SerialLoggingCommand { get; private set; } = null!;
-    public ICommand SetSerialLogPathCommand { get; private set; } = null!;
+    #endregion
+
+    #region Serial Options
+
+    public ICommand ComPortRadioChangedCommand { get; private set; } = null!;       // If Comport Changed
+    public ICommand SerialSettingChangedCommand { get; private set; } = null!;      // If other port setting changed. (like baudrate, parity...)
+    public ICommand EncodingBytesChangedCommand { get; private set; } = null!;      // Show serial data, base on Encoding
+    public ICommand SendSerialDataCommand { get; private set; } = null!;            // Send serial data
+    public ICommand ReadTypeChangedCommand { get; private set; } = null!;           // Choose how to read serial data
+
+    #endregion
+
+    #region Open Windows
+
+    public ICommand OpenMacroWindowCommand { get; private set; } = null!;           // Open macro window
+
+    #endregion
+
+    #region Serial Logging
+
+    public ICommand SerialLoggingCommand { get; private set; } = null!;         // Start logging serial data
+    public ICommand SetSerialLogPathCommand { get; private set; } = null!;      // Set logging path
+
+    #endregion
     
+    /// <summary>
+    /// Initialize commands
+    /// </summary>
     private void InitializeSerialCommands()
     {
         // 기본메뉴 커맨드
@@ -160,8 +189,8 @@ public class MainViewModel : ViewModelBase
         OpenMacroWindowCommand = ReactiveCommand.Create(OpenMacroWindowAsync_Clicked);
         ReadTypeChangedCommand = ReactiveCommand.Create<string>(ReadTypeChanged_Clicked);
 
-        // SerialLoggingCommand = ReactiveCommand.Create<object>(StartSerialLogging);
-        // SetSerialLogPathCommand = ReactiveCommand.CreateFromTask(OnSelectSerialLogFolder_Click);
+        SerialLoggingCommand = ReactiveCommand.Create<object>(StartSerialLogging);
+        SetSerialLogPathCommand = ReactiveCommand.CreateFromTask(OnSelectSerialLogFolder_Click);
     }
 
     #endregion
@@ -324,6 +353,43 @@ public class MainViewModel : ViewModelBase
         };
     }
     
+    
+    /// <summary>
+    /// Start logging received serial data
+    /// </summary>
+    /// <param name="sender">Button</param>
+    private void StartSerialLogging(object? sender)
+    {
+        var b = sender as Button;
+
+        if (!IsSerialLogging)
+        {
+            _serialLogManager = new ULogManager("SerialDataReceived", new LogConfig
+            {
+                FilePath = Path.Combine(SerialLogFilePath, $"DataReceived-{DateTime.Now:yyyyMMdd HHmmss}.log"),
+                Layout = "[%date] %logger => %message%newline"
+            });
+        }
+
+        IsSerialLogging = !IsSerialLogging;
+        b!.Content = IsSerialLogging ? "Stop Data Logging" : "Start Data Logging";
+    }
+
+
+    /// <summary>
+    /// Change Log Path on Click Button
+    /// </summary>
+    private async Task OnSelectSerialLogFolder_Click()
+    {
+        // Get folder path when click folder
+        var result = await _selectFolderInteraction.Handle("");
+
+        if (!string.IsNullOrEmpty(result))
+        {
+            SerialLogFilePath = result;
+            _serialLogManager.ChangeLogFilePath(SerialLogFilePath); // Change path
+        }
+    }
 
     #endregion
     

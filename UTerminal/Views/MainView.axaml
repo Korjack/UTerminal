@@ -42,6 +42,7 @@
             <StackPanel.Styles>
                 <StyleInclude Source="avares://UTerminal/Styles/SerialDeviceRadioButton.axaml" />
             </StackPanel.Styles>
+            
             <!-- 기본 메뉴 뷰 -->
             <StackPanel>
                 <StackPanel.Styles>
@@ -512,33 +513,33 @@
             <!-- Custom Baudrate -->
 
             <!-- For logging serial data -->
-            <!-- <Panel> -->
-            <!--     <Border BorderBrush="Gray" BorderThickness="2" Padding="5"> -->
-            <!--         <StackPanel Margin="0, 8, 0, 0"> -->
-            <!--             <Button Content="Start Data Logging" -->
-            <!--                     FontSize="10" -->
-            <!--                     HorizontalAlignment="Stretch" -->
-            <!--                     HorizontalContentAlignment="Center" -->
-            <!--                     Command="{Binding SerialLoggingCommand}" -->
-            <!--                     CommandParameter="{Binding RelativeSource={RelativeSource Self}}" /> -->
-            <!--             <Button Content="Change Log Path" -->
-            <!--                     IsEnabled="{Binding !IsSerialLogging}" -->
-            <!--                     FontSize="10" -->
-            <!--                     HorizontalAlignment="Stretch" -->
-            <!--                     HorizontalContentAlignment="Center" -->
-            <!--                     Command="{Binding SetSerialLogPathCommand}" /> -->
-            <!--         </StackPanel> -->
-            <!--     </Border> -->
-            <!-- -->
-            <!--     <TextBlock Text="Logging" -->
-            <!--                FontSize="10" -->
-            <!--                Background="White" -->
-            <!--                Foreground="Black" -->
-            <!--                HorizontalAlignment="Center" -->
-            <!--                VerticalAlignment="Top" -->
-            <!--                Margin="0,-10,0,0" -->
-            <!--                Padding="5" /> -->
-            <!-- </Panel> -->
+            <Panel>
+                <Border BorderBrush="Gray" BorderThickness="2" Padding="5">
+                    <StackPanel Margin="0, 8, 0, 0">
+                        <Button Content="Start Data Logging"
+                                FontSize="10"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding SerialLoggingCommand}"
+                                CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+                        <Button Content="Change Log Path"
+                                IsEnabled="{Binding !IsSerialLogging}"
+                                FontSize="10"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding SetSerialLogPathCommand}" />
+                    </StackPanel>
+                </Border>
+            
+                <TextBlock Text="Logging"
+                           FontSize="10"
+                           Background="White"
+                           Foreground="Black"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Top"
+                           Margin="0,-10,0,0"
+                           Padding="5" />
+            </Panel>
             <!-- For logging serial data -->
 
         </StackPanel>

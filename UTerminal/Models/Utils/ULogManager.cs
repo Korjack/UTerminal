@@ -4,7 +4,7 @@ using log4net.Core;
 using log4net.Layout;
 using log4net.Repository.Hierarchy;
 
-namespace UTerminal.Models;
+namespace UTerminal.Models.Utils;
 
 public class ULogManager
 {
