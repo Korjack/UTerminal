@@ -1,21 +1,18 @@
 using System;
 using System.Globalization;
 using System.Text;
+using UTerminal.Models.Messages.Interfaces;
+using UTerminal.Models.Messages.Types;
+using UTerminal.Models.Serial;
 
-namespace UTerminal.Models;
+namespace UTerminal.Models.Messages;
 
-public class SerialMessage
+public class SerialMessage : ISerialMessage
 {
-    public enum MessageType
-    {
-        Received,
-        Sent,
-        Error
-    }
-
     public byte[] Data { get; set; } = [];
     public int DataSize { get; set; } = 0;
-    public string ErrorText { get; set; } = String.Empty;
+    
+    public string ErrorText { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; }
     public MessageType Type { get; set; }
 
