@@ -296,15 +296,15 @@ public class MainViewModel : ViewModelBase
     /// </summary>
     private void OpenMacroWindowAsync_Clicked()
     {
-        // var macroWindow = new MacroView
-        // {
-        //     DataContext = new MacroViewModel(SendSerialDataAsync_Clicked)
-        // };
-        //
-        // if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
-        // {
-        //     macroWindow.Show(desktopLifetime.MainWindow!);
-        // }
+        var macroWindow = new MacroView
+        {
+            DataContext = new MacroViewModel(SendSerialDataCommand)
+        };
+        
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
+        {
+            macroWindow.Show(desktopLifetime.MainWindow!);
+        }
     }
 
 
