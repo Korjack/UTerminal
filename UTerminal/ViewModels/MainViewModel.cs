@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
@@ -10,7 +8,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using ReactiveUI;
-using UTerminal.Models;
 using UTerminal.Models.Messages;
 using UTerminal.Models.Messages.Interfaces;
 using UTerminal.Models.PortManager;
@@ -23,7 +20,7 @@ namespace UTerminal.ViewModels;
 
 public class MainViewModel : ViewModelBase
 {
-    private readonly ISerialService _serialService;                     // Serial Connection Management
+    private readonly SerialService _serialService;                     // Serial Connection Management
     private readonly SerialMsgProcessor _serialMsgProcessor;            // Converts and processes messages of serial message type.
     
     public SerialConnectionConfiguration ConnectionConfig { get; }      // Settings closely related to serial connection
@@ -34,9 +31,10 @@ public class MainViewModel : ViewModelBase
 
     #region Fields
 
-    private bool _isConnected;                                  // Serial connection status
-    private string _receivedSerialData = string.Empty;          // Convert to string from serial message
-    private bool _isSerialLogging;                              // Serial data logging status
+    private bool _isConnected;                                              // Serial connection status
+    private string _receivedSerialData = string.Empty;                      // Convert to string from serial message
+    private bool _isSerialLogging;                                          // Serial data logging status
+    private ObservableAsPropertyHelper<double> _messageRate;                // Message hz
 
     #endregion
 
@@ -60,6 +58,7 @@ public class MainViewModel : ViewModelBase
     }
     
     public string SerialLogFilePath { get; set; } = AppContext.BaseDirectory;
+    public double MessageRate => _messageRate.Value;
 
     #endregion
     
@@ -76,6 +75,7 @@ public class MainViewModel : ViewModelBase
         InitializeSerialDataStream();
         InitializeSerialCommands();
         InitInteractions();
+        InitializeObservable();
     }
     
     #region Obserable
@@ -106,6 +106,16 @@ public class MainViewModel : ViewModelBase
             .Subscribe(pattern => ReceivedSerialData = pattern.EventArgs);
     }
 
+    /// <summary>
+    /// Init observable value
+    /// </summary>
+    private void InitializeObservable()
+    {
+        // Update message hz on 100ms
+        Observable.Interval(TimeSpan.FromMilliseconds(100))
+            .Select(_ => _serialService.MessageRate)
+            .ToProperty(this, nameof(MessageRate), out _messageRate);
+    }
 
     /// <summary>
     /// Processes serial messages received via Observable.

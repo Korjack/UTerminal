@@ -1,28 +1,34 @@
 using System;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using ReactiveUI;
 using UTerminal.Models.Messages.Interfaces;
+using UTerminal.Models.Monitoring;
 using UTerminal.Models.Serial.Interfaces;
 
 namespace UTerminal.Models.Serial;
 
-public class SerialService : ISerialService
+public class SerialService : ReactiveObject, ISerialService
 {
     // Basic serial
     private readonly ISerialPort _serialPort;
     private readonly SerialDataParser _parser;
+    private readonly MessageRateMonitor _rateMonitor;
     
     // Serial message receive event handler
     public event EventHandler<ISerialMessage>? MsgReceived;
     private readonly CancellationTokenSource _msgReadToken = new();
     
     public bool IsConnected => _serialPort.IsConnected;
+    public double MessageRate => _rateMonitor.CurrentRate;      // message hz
     
     public SerialService(SerialConnectionConfiguration connectionConfig, SerialRuntimeConfiguration runtimeConfig)
     {
         _serialPort = new SerialPortAdapter(connectionConfig, runtimeConfig);
         _parser = new SerialDataParser();
+        _rateMonitor = new MessageRateMonitor();
 
         // When message received, Invoke Handler
         Task.Run(async () => await OnMessageReceived());
@@ -63,6 +69,7 @@ public class SerialService : ISerialService
             while (!_msgReadToken.IsCancellationRequested)
             {
                 var message = await reader.ReadAsync(token);
+                _rateMonitor.RegisterMessage();
                 await RaiseEventAsync(message);
             }
         }

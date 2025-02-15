@@ -84,6 +84,9 @@ public class SerialPortAdapter : ISerialPort
         {
             _port.Open();
             
+            // Clear Buffer before read data
+            _port.DiscardInBuffer();
+            
             _serialToken = new CancellationTokenSource();
             Task.Run(async () => await StartReading(_serialToken.Token));
             
