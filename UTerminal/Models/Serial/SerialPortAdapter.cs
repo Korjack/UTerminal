@@ -10,6 +10,7 @@ using UTerminal.Models.Messages;
 using UTerminal.Models.Messages.Interfaces;
 using UTerminal.Models.Messages.Types;
 using UTerminal.Models.Serial.Interfaces;
+using UTerminal.Models.Utils;
 
 namespace UTerminal.Models.Serial;
 
@@ -24,6 +25,7 @@ public class SerialPortAdapter : ISerialPort
     private readonly Channel<ISerialMessage> _msgChannel;
     private readonly List<byte> _bufferList = [];
     
+    private SystemLogger _systemLogger = SystemLogger.Instance;
     private CancellationTokenSource _serialToken = null!;
     private bool _canBufferAdd;
 
@@ -90,11 +92,17 @@ public class SerialPortAdapter : ISerialPort
             _serialToken = new CancellationTokenSource();
             Task.Run(async () => await StartReading(_serialToken.Token));
             
+            _systemLogger.LogInfo($"Serial Port Connect at\n" +
+                                  $"\t Port: {_connectionConfig.PortName}\n" +
+                                  $"\t BaudRate: {_connectionConfig.BaudRate}\n" +
+                                  $"\t Parity: {_connectionConfig.Parity}\n" +
+                                  $"\t DataBits: {_connectionConfig.DataBits}\n" +
+                                  $"\t StopBits: {_connectionConfig.StopBits}\n\n");
             return true;
         }
         catch (Exception e)
         {
-            // TODO: Send why disconnected
+            _systemLogger.LogSystemError(e);
         }
 
         return false;
@@ -110,6 +118,8 @@ public class SerialPortAdapter : ISerialPort
         
         _serialToken.Cancel();
         _port.Close();
+        
+        _systemLogger.LogInfo("Disconnect Serial");
         
         return true;
     }
@@ -131,7 +141,7 @@ public class SerialPortAdapter : ISerialPort
         }
         catch (Exception e)
         {
-            // TODO: Send why cant write
+            _systemLogger.LogSystemError(e);
         }
 
         return false;
@@ -145,6 +155,7 @@ public class SerialPortAdapter : ISerialPort
     {
         try
         {
+            _systemLogger.LogInfo("Serial Read Ready.");
             while (!token.IsCancellationRequested)
             {
                 int bufferSize = _port.BytesToRead;
@@ -171,11 +182,12 @@ public class SerialPortAdapter : ISerialPort
         }
         catch (OperationCanceledException e)
         {
-            // 작업이 취소된 경우의 처리
+            _systemLogger.LogSystemError(e);
+            _systemLogger.LogInfo("Serial Reading Stopped");
         }
         catch (Exception e)
         {
-            // 예외 처리
+            _systemLogger.LogSystemError(e);
         }
     }
 
@@ -257,6 +269,7 @@ public class SerialPortAdapter : ISerialPort
             }
         }
     }
+    
     
     /// <summary>
     /// Return <see cref="byte"/>[] from <see cref="List{Byte}"/> and Clear List
