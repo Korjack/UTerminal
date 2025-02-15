@@ -92,12 +92,6 @@ public class SerialPortAdapter : ISerialPort
             _serialToken = new CancellationTokenSource();
             Task.Run(async () => await StartReading(_serialToken.Token));
             
-            _systemLogger.LogInfo($"Serial Port Connect at\n" +
-                                  $"\t Port: {_connectionConfig.PortName}\n" +
-                                  $"\t BaudRate: {_connectionConfig.BaudRate}\n" +
-                                  $"\t Parity: {_connectionConfig.Parity}\n" +
-                                  $"\t DataBits: {_connectionConfig.DataBits}\n" +
-                                  $"\t StopBits: {_connectionConfig.StopBits}\n\n");
             return true;
         }
         catch (Exception e)
@@ -118,8 +112,6 @@ public class SerialPortAdapter : ISerialPort
         
         _serialToken.Cancel();
         _port.Close();
-        
-        _systemLogger.LogInfo("Disconnect Serial");
         
         return true;
     }
