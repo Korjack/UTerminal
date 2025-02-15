@@ -7,6 +7,7 @@ using ReactiveUI;
 using UTerminal.Models.Messages.Interfaces;
 using UTerminal.Models.Monitoring;
 using UTerminal.Models.Serial.Interfaces;
+using UTerminal.Models.Utils;
 
 namespace UTerminal.Models.Serial;
 
@@ -16,6 +17,10 @@ public class SerialService : ReactiveObject, ISerialService
     private readonly ISerialPort _serialPort;
     private readonly SerialDataParser _parser;
     private readonly MessageRateMonitor _rateMonitor;
+
+    private readonly SerialConnectionConfiguration _connectionConfig;
+    
+    private readonly SystemLogger _systemLogger = SystemLogger.Instance;
     
     // Serial message receive event handler
     public event EventHandler<ISerialMessage>? MsgReceived;
@@ -26,21 +31,33 @@ public class SerialService : ReactiveObject, ISerialService
     
     public SerialService(SerialConnectionConfiguration connectionConfig, SerialRuntimeConfiguration runtimeConfig)
     {
+        _connectionConfig = connectionConfig;
+        
         _serialPort = new SerialPortAdapter(connectionConfig, runtimeConfig);
         _parser = new SerialDataParser();
         _rateMonitor = new MessageRateMonitor();
 
         // When message received, Invoke Handler
         Task.Run(async () => await OnMessageReceived());
+        
+        _systemLogger.LogInfo("Initialized Serial Service");
     }
     
     public bool Connect()
     {
+        _systemLogger.LogInfo($"Serial Port Connect at\n" +
+                              $"\t Port: {_connectionConfig.PortName}\n" +
+                              $"\t BaudRate: {_connectionConfig.BaudRate}\n" +
+                              $"\t Parity: {_connectionConfig.Parity}\n" +
+                              $"\t DataBits: {_connectionConfig.DataBits}\n" +
+                              $"\t StopBits: {_connectionConfig.StopBits}\n\n");
+        
         return _serialPort.Open();
     }
     
     public bool Disconnect()
     {
+        _systemLogger.LogInfo("Disconnect Serial");
         return _serialPort.Close();
     }
     
@@ -49,9 +66,12 @@ public class SerialService : ReactiveObject, ISerialService
         if (!_serialPort.IsConnected) return false;
         
         byte[] parseData = _parser.ParseToBytes(data);
-        await _serialPort.WriteAsync(parseData);
+        var result = await _serialPort.WriteAsync(parseData);
 
-        return true;
+        _systemLogger.LogInfo($"Serial Write Status: {result}" +
+                              $"\t String Data: {data}\n" +
+                              $"\t Parsed Data: {BitConverter.ToString(parseData)}\n\n");
+        return result;
     }
 
     /// <summary>
@@ -66,6 +86,7 @@ public class SerialService : ReactiveObject, ISerialService
 
         try
         {
+            _systemLogger.LogInfo("Message Received Start");
             while (!_msgReadToken.IsCancellationRequested)
             {
                 var message = await reader.ReadAsync(token);
@@ -75,7 +96,8 @@ public class SerialService : ReactiveObject, ISerialService
         }
         catch (OperationCanceledException e)
         {
-            // TODO: Message received event normaly canceled
+            _systemLogger.LogSystemError(e);
+            _systemLogger.LogInfo("Message Received Canceled");
         }
     }
     
