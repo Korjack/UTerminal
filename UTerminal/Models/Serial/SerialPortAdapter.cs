@@ -10,7 +10,7 @@ using UTerminal.Models.Messages;
 using UTerminal.Models.Messages.Interfaces;
 using UTerminal.Models.Messages.Types;
 using UTerminal.Models.Serial.Interfaces;
-using UTerminal.Models.Utils;
+using UTerminal.Models.Utils.Logger;
 
 namespace UTerminal.Models.Serial;
 

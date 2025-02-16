@@ -1,13 +1,12 @@
 using System;
 using System.Linq;
-using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ReactiveUI;
 using UTerminal.Models.Messages.Interfaces;
 using UTerminal.Models.Monitoring;
 using UTerminal.Models.Serial.Interfaces;
-using UTerminal.Models.Utils;
+using UTerminal.Models.Utils.Logger;
 
 namespace UTerminal.Models.Serial;
 
