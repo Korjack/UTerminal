@@ -4,16 +4,16 @@ using System.Runtime.CompilerServices;
 using log4net;
 using log4net.Core;
 
-namespace UTerminal.Models.Utils;
+namespace UTerminal.Models.Utils.Logger;
 
 public class SystemLogger
 {
     private static readonly Lazy<SystemLogger> _instance = new(() => new SystemLogger());
     public static SystemLogger Instance => _instance.Value;
     
-    private readonly ILog _logger;
+    private readonly ILog _log;
 
-    public string LogName { get; } = "SystemLog";
+    public static string LogName => "SystemLog";
 
     private SystemLogger()
     {
@@ -25,27 +25,27 @@ public class SystemLogger
             LogLevel = Level.Info
         };
 
-        _logger = LogManager.GetLogger(LogName);
+        _log = LogManager.GetLogger(LogName);
         LoggerConfiguration.Configure(config, LogName);
     }
 
     public void LogSerialConnection(string portName, bool isConnected)
     {
         var status = isConnected ? "Connected" : "Disconnected";
-        _logger.Info($"Serial port [{portName}] {status}");
+        _log.Info($"Serial port [{portName}] {status}");
     }
 
     public void LogConfigurationChange(string setting, string oldValue, string newValue)
     {
-        _logger.Info($"Configuration changed: {setting} from '{oldValue}' to '{newValue}'");
+        _log.Info($"Configuration changed: {setting} from '{oldValue}' to '{newValue}'");
     }
 
     public void LogSystemError(Exception ex, [CallerMemberName]string operation = "")
     {
-        _logger.Error($"Error during {operation}: {ex.Message}");
+        _log.Error($"Error during {operation}: {ex.Message}");
     }
 
-    public void LogInfo(string log, [CallerMemberName]string methodName = "") => _logger.Info($"[{methodName}]{log}");
-    public void LogError(string log) => _logger.Error(log);
-    public void LogWarning(string log) => _logger.Warn(log);
+    public void LogInfo(string log, [CallerMemberName]string methodName = "") => _log.Info($"[{methodName}]{log}");
+    public void LogError(string log) => _log.Error(log);
+    public void LogWarning(string log) => _log.Warn(log);
 }

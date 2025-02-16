@@ -2,6 +2,7 @@ using log4net;
 using log4net.Appender;
 using log4net.Layout;
 using log4net.Repository.Hierarchy;
+using UTerminal.Models.Utils.Logger;
 
 namespace UTerminal.Models.Utils;
 
@@ -27,7 +28,7 @@ public static class LoggerConfiguration
         ((PatternLayout)fileAppender.Layout).ActivateOptions();
         fileAppender.ActivateOptions();
 
-        if (hierarchy.GetLogger(logName) is Logger logger)
+        if (hierarchy.GetLogger(logName) is log4net.Repository.Hierarchy.Logger logger)
         {
             logger.AddAppender(fileAppender);
             logger.Level = config.LogLevel;
