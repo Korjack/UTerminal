@@ -74,6 +74,7 @@ public class PortManager : ReactiveObject
         {
             firstAvailablePort.IsSelected = true;
             SelectedPort = firstAvailablePort;
+            _connectionConfig.PortName = firstAvailablePort.Name;
         }
     }
 
