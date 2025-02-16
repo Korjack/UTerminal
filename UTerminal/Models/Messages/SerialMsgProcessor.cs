@@ -2,6 +2,7 @@ using System;
 using UTerminal.Models.Formatters;
 using UTerminal.Models.Messages.Interfaces;
 using UTerminal.Models.Serial;
+using UTerminal.Models.Utils.Logger;
 
 namespace UTerminal.Models.Messages;
 
@@ -9,6 +10,9 @@ public class SerialMsgProcessor : IMessageProcessor<ISerialMessage>
 {
     private readonly IBufferManager<ISerialMessage> _bufferManager;
     private readonly MessageFormatter _messageFormatter;
+
+    private readonly SystemLogger _systemLogger = SystemLogger.Instance;
+    private readonly SerialMsgLogger _msgLogManager = SerialMsgLogger.Instance;
     
     private EncodingBytes _currentFormat = EncodingBytes.ASCII;
     
@@ -19,11 +23,20 @@ public class SerialMsgProcessor : IMessageProcessor<ISerialMessage>
     {
         _bufferManager = new CircularBufferManager(capacity);
         _messageFormatter = new MessageFormatter();
+        
+        _systemLogger.LogInfo("Message Processor Initialized");
     }
     
     public void ProcessMessage(ISerialMessage message)
     {
         _bufferManager.Add(message);
+
+        // If serial logging started 
+        if (_msgLogManager.IsStartLogging)
+        {
+            _msgLogManager.Info(((SerialMessage)message).ToString(_currentFormat, false));
+        }
+        
         OnBufferUpdated();
     }
 
@@ -54,6 +67,7 @@ public class SerialMsgProcessor : IMessageProcessor<ISerialMessage>
     {
         if (_currentFormat == format) return;
         
+        _systemLogger.LogConfigurationChange("Message Decode Format", _currentFormat.ToString(), format.ToString());
         _currentFormat = format;
         OnBufferUpdated();
     }

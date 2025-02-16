@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using UTerminal.Models.Monitoring.Interfaces;
+using UTerminal.Models.Utils.Logger;
 
 namespace UTerminal.Models.Monitoring;
 
@@ -7,6 +8,8 @@ public class MessageRateMonitor : IMessageRateMonitor
 {
     private readonly Stopwatch _stopwatch = new();
     private readonly object _lock = new();
+    
+    private readonly SystemLogger _systemLogger = SystemLogger.Instance;
 
     private int _messageCount;
 
@@ -26,6 +29,7 @@ public class MessageRateMonitor : IMessageRateMonitor
     public MessageRateMonitor()
     {
         _stopwatch.Start();
+        _systemLogger.LogInfo("Message Rate Monitor Initialized");
     }
     
     public void RegisterMessage()

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using UTerminal.Models.Utils.Interfaces;
+using UTerminal.Models.Utils.Logger;
 
 namespace UTerminal.Models.Utils;
 
@@ -8,6 +9,8 @@ public class MacroSettings(string settingPath, string fileName) : ISettingsManag
 {
     public string FileName { get; set; } = fileName;
     public string SettingPath { get; set; } = settingPath;
+    
+    private SystemLogger _systemLogger = SystemLogger.Instance;
 
     /// <summary>
     /// Load macro settings from file
@@ -25,6 +28,9 @@ public class MacroSettings(string settingPath, string fileName) : ISettingsManag
         }
         
         string jsonContent = File.ReadAllText(filePath);
+        
+        _systemLogger.LogInfo($"Macro List Loaded from {filePath}");
+        
         return JsonSerializer.Deserialize<MacroItems[]>(jsonContent) ?? [];
     }
 
@@ -48,5 +54,7 @@ public class MacroSettings(string settingPath, string fileName) : ISettingsManag
         
         string jsonContent = JsonSerializer.Serialize(config, jsonOption);
         File.WriteAllText(filePath, jsonContent);
+        
+        _systemLogger.LogInfo($"Macro List Saved at {filePath}");
     }
 }
