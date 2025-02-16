@@ -14,12 +14,13 @@ public class SystemLogger
     private readonly ILog _log;
 
     public static string LogName => "SystemLog";
+    public string SystemLogPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), App.Current.Name, App.Current.Name + "-system.log");
 
     private SystemLogger()
     {
         var config = new LogConfig
         {
-            FilePath = Path.Combine(AppContext.BaseDirectory, App.Current.Name + "-system.log"),
+            FilePath = SystemLogPath,
             FilePattern = "'.'yyyy-MM-dd",
             Layout = "%date [%thread] %-5level %logger - %message%newline",
             LogLevel = Level.Info
