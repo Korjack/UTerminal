@@ -1,82 +1,47 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Reactive.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using ReactiveUI;
-using UTerminal.Models;
+using UTerminal.Models.Messages;
+using UTerminal.Models.Messages.Interfaces;
+using UTerminal.Models.PortManager;
+using UTerminal.Models.Serial;
+using UTerminal.Models.Utils.Logger;
 using UTerminal.Views;
 
 namespace UTerminal.ViewModels;
 
 public class MainViewModel : ViewModelBase
 {
-    public ICommand QuitCommand { get; private set; }
+    private readonly SerialService _serialService;                      // Serial Connection Management
+    private readonly SerialMsgProcessor _serialMsgProcessor;            // Converts and processes messages of serial message type.
     
-    public MainViewModel()
-    {
-        QuitCommand = ReactiveCommand.Create(QuitProgram);
-        
-        var setting = InitializeSerialSettings();
-        _serialDevice = InitializeSerialDevice(setting);
-        InitializeSerialDataStream();
-        InitializeSerialCommands();
-    }
+    public SerialConnectionConfiguration ConnectionConfig { get; }      // Settings closely related to serial connection
+    public SerialRuntimeConfiguration RuntimeConfig { get; }            // Settings can be changed regardless of connection
+    public PortManager PortManager { get; }                             // Port Manager for seek port path or set
     
-    /// <summary>
-    /// Quit Program
-    /// </summary>
-    private void QuitProgram()
-    {
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
-        {
-            desktopLifetime.Shutdown();
-        }
-    }
-    
-    
-    #region Serial
-    
-    #region Serial Setting
-    
-    private readonly SerialDevice _serialDevice;        // Init Serial Device
-    public SerialSettings SerialSettings => _serialDevice.SerialSettings;
-    
-    public ObservableCollection<OptionRadioItem> DefaultComPortList { get; private set; } = null!;
-    public IEnumerable<BaudRateType> BaudRatesOption => BaudRateType.StandardBaudRates;
-    public static Array ParityOption => Enum.GetValues(typeof(ParityType));
-    public static Array DataBitsOption => Enum.GetValues(typeof(DataBitsType));
-    public static Array StopBitsOption => Enum.GetValues(typeof(StopBitsType));
-    
-    #endregion
+    private readonly SerialMsgLogger _msgLogManager = SerialMsgLogger.Instance;     // Serial Message Log Manager
+    private readonly SystemLogger _systemLogger = SystemLogger.Instance;            // System Log Manager
 
     #region Fields
 
-    private string _serialStringData = string.Empty;
-    private bool _isConnected;
-    private double _dataRate;
-    private int _messageCount = 0;
-    private readonly Stopwatch _hzStopwatch = new();
-    
-    private readonly SerialStringManager _serialStringManager = new(1000);
-    public delegate Task SendSerialDataDelegate(string data);
-    
-    private string _lastErrorMessage = "When serial error appear, updated only latest message here";
+    private bool _isConnected;                                              // Serial connection status
+    private string _receivedSerialData = string.Empty;                      // Convert to string from serial message
+    private bool _isSerialLogging;                                          // Serial data logging status
+    private ObservableAsPropertyHelper<double> _messageRate;                // Message hz
 
     #endregion
-    
+
     #region Properties
 
-    public string SerialStringData
-    {
-        get => _serialStringData;
-        private set => this.RaiseAndSetIfChanged(ref _serialStringData, value);
+    public string ReceivedSerialData { 
+        get => _receivedSerialData;
+        private set => this.RaiseAndSetIfChanged(ref _receivedSerialData, value);
     }
     
     public bool IsConnected
@@ -84,156 +49,223 @@ public class MainViewModel : ViewModelBase
         get => _isConnected;
         private set => this.RaiseAndSetIfChanged(ref _isConnected, value);
     }
-    
-    public double DataRate
-    {
-        get => _dataRate;
-        private set => this.RaiseAndSetIfChanged(ref _dataRate, value);
-    }
 
-    public string LastErrorMessage
+    public bool IsSerialLogging
     {
-        get => _lastErrorMessage;
-        private set => this.RaiseAndSetIfChanged(ref _lastErrorMessage, value);
+        get => _isSerialLogging;
+        private set => this.RaiseAndSetIfChanged(ref _isSerialLogging, value);
     }
+    
+    public double MessageRate => _messageRate.Value;
 
     #endregion
     
-    #region Initialize Method
-    
-    /// <summary>
-    /// Init Serial Setting
-    /// </summary>
-    /// <returns><see cref="SerialSettings"/></returns>
-    private SerialSettings InitializeSerialSettings()
+    public MainViewModel()
     {
-        var settings = new SerialSettings();
+        ConnectionConfig = new SerialConnectionConfiguration();
+        RuntimeConfig = new SerialRuntimeConfiguration();
         
-        // 기본 설정값 표기
-        DefaultComPortList = settings.RadioComPortItems;
+        _serialService = new SerialService(ConnectionConfig, RuntimeConfig);
+        PortManager = new PortManager(ConnectionConfig);
+        
+        _serialMsgProcessor = new SerialMsgProcessor(1024);
+        
+        InitializeSerialDataStream();
+        InitializeSerialCommands();
+        InitInteractions();
+        InitializeObservable();
+        
+        _systemLogger.LogInfo("Initialized Application");
+    }
+    
+    #region Obserable
 
-        return settings;
-    }
-    
-    /// <summary>
-    /// 시리얼 디바이스를 초기화 합니다.
-    /// 기본 연결 설정값을 초기화 하여 전달하고, 연결 디바이스를 생성합니다.
-    /// </summary>
-    /// <param name="settings"><see cref="SerialSettings"/> 설정 값이 필요합니다.</param>
-    /// <returns><see cref="SerialDevice"/> 반환</returns>
-    private SerialDevice InitializeSerialDevice(SerialSettings settings)
-    {
-        var device = new SerialDevice(settings);
-        device.GetPortPaths();
-        return device;
-    }
-    
     /// <summary>
     /// 시리얼 연결 디바이스에 대한 데이터처리에 대한 스트림을 생성합니다.
     /// 데이터 수신 -> 데이터 처리 -> UI 업데이트를 수행합니다.
     /// </summary>
     private void InitializeSerialDataStream()
     {
-        var serialDataStream = Observable.FromEventPattern<EventHandler<SerialMessage>, SerialMessage>(
-                h => _serialDevice.MessageReceived += h,
-                h => _serialDevice.MessageReceived -= h)
-            .Select(x => x.EventArgs)
-            .Do(UpdateDataRate);
-        
+        // Serial message receiver
+        var serialDataStream = Observable.FromEventPattern<EventHandler<ISerialMessage>, ISerialMessage>(
+                h => _serialService.MsgReceived += h,
+                h => _serialService.MsgReceived -= h)
+            .Select(x => x.EventArgs);
+
         serialDataStream
             .Buffer(TimeSpan.FromMilliseconds(16.67))
             .Where(messages => messages.Count > 0)
             .ObserveOn(RxApp.TaskpoolScheduler)
-            .Select(ProcessMessages)
+            .Subscribe(ProcessMessages);
+
+        // Processed message receiver
+        Observable.FromEventPattern<EventHandler<string>, string>(
+                h => _serialMsgProcessor.BufferUpdated += h,
+                h => _serialMsgProcessor.BufferUpdated += h)
             .ObserveOn(RxApp.MainThreadScheduler)
-            .Subscribe(UpdateUi);
-        
-        // Process error message
-        serialDataStream
-            .Where(x => x.Type == SerialMessage.MessageType.Error)
-            .Do(UpdateErrorMessage);
+            .Subscribe(pattern => ReceivedSerialData = pattern.EventArgs);
     }
-    
+
     /// <summary>
-    /// 사용자 명령에 대한 처리를 초기화 합니다.
+    /// Init observable value
     /// </summary>
-    private void InitializeSerialCommands()
+    private void InitializeObservable()
     {
-        // 기본메뉴 커맨드
-        ConnectCommand = ReactiveCommand.Create(ConnectSerialPort);
-        ReScanCommand = ReactiveCommand.Create(ReScanSerialPort);
-        
-        // 옵션 설정 커맨드
-        ComPortRadioChangedCommand = ReactiveCommand.Create<object>(ComPortRadio_Clicked);
-        SerialSettingChangedCommand = ReactiveCommand.Create<object>(SerialSettingRadio_Clicked);
-        EncodingBytesChangedCommand = ReactiveCommand.Create<string>(EncodingByteRadio_Clicked);
-        
-        SendSerialDataCommand = ReactiveCommand.CreateFromTask<string>(SendSerialDataAsync_Clicked);
-        OpenMacroWindowCommand = ReactiveCommand.Create(OpenMacroWindowAsync_Clicked);
-        ReadTypeChangedCommand = ReactiveCommand.Create<string>(ReadTypeChanged_Clicked);
+        // Update message hz on 100ms
+        Observable.Interval(TimeSpan.FromMilliseconds(100))
+            .Select(_ => _serialService.MessageRate)
+            .ToProperty(this, nameof(MessageRate), out _messageRate);
+    }
+
+    /// <summary>
+    /// Processes serial messages received via Observable.
+    /// </summary>
+    /// <param name="messages"><see cref="List{T}"/>Received message list</param>
+    private void ProcessMessages(IList<ISerialMessage> messages)
+    {
+        foreach (var msg in messages)
+        {
+            _serialMsgProcessor.ProcessMessage(msg);
+        }
+    }
+
+    #endregion
+
+    #region Interactions
+
+    // Interactions for selecting folders
+    private Interaction<string?, string?> _selectFolderInteraction = null!;
+    public Interaction<string?, string?> SelectFolderInteraction => _selectFolderInteraction;
+
+    private void InitInteractions()
+    {
+        // Interaction Init
+        _selectFolderInteraction = new Interaction<string?, string?>();
     }
 
     #endregion
     
     #region Commands
+
+    #region Commands Init
+
+    #region Default Main Menu
+
+    public ICommand QuitCommand { get; private set; } = null!;          // Quit Program
+    public ICommand ConnectCommand { get; set; } = null!;               // Connect Serial
+    public ICommand ReScanCommand { get; set; } = null!;                // Scan Port List
+
+    #endregion
+
+    #region Serial Options
+
+    public ICommand ComPortRadioChangedCommand { get; private set; } = null!;       // If Comport Changed
+    public ICommand SerialSettingChangedCommand { get; private set; } = null!;      // If other port setting changed. (like baudrate, parity...)
+    public ICommand EncodingBytesChangedCommand { get; private set; } = null!;      // Show serial data, base on Encoding
+    public ICommand SendSerialDataCommand { get; private set; } = null!;            // Send serial data
+    public ICommand ReadTypeChangedCommand { get; private set; } = null!;           // Choose how to read serial data
+
+    #endregion
+
+    #region Open Windows
+
+    public ICommand OpenMacroWindowCommand { get; private set; } = null!;           // Open macro window
+
+    #endregion
+
+    #region Serial Logging
+
+    public ICommand SerialLoggingCommand { get; private set; } = null!;         // Start logging serial data
+    public ICommand SetSerialLogPathCommand { get; private set; } = null!;      // Set logging path
+
+    #endregion
     
-    public ICommand ConnectCommand { get; set; } = null!;
-    public ICommand ReScanCommand { get; set; } = null!;
-    
-    public ICommand ComPortRadioChangedCommand { get; private set; } = null!;
-    public ICommand SerialSettingChangedCommand { get; private set; } = null!;
-    public ICommand EncodingBytesChangedCommand { get; private set; } = null!;
-    public ICommand SendSerialDataCommand { get; private set; } = null!;
-    public ICommand OpenMacroWindowCommand { get; private set; } = null!;
-    public ICommand ReadTypeChangedCommand { get; private set; } = null!;
+    /// <summary>
+    /// Initialize commands
+    /// </summary>
+    private void InitializeSerialCommands()
+    {
+        // 기본메뉴 커맨드
+        QuitCommand = ReactiveCommand.Create(QuitProgram);
+        ConnectCommand = ReactiveCommand.Create(ConnectSerialPort);
+        ReScanCommand = ReactiveCommand.Create(PortManager.ScanPort);
+
+        // 옵션 설정 커맨드
+        ComPortRadioChangedCommand = ReactiveCommand.Create<object>(ComPortRadio_Clicked);
+        SerialSettingChangedCommand = ReactiveCommand.Create<object>(SerialSettingRadio_Clicked);
+        EncodingBytesChangedCommand = ReactiveCommand.Create<string>(EncodingByteRadio_Clicked);
+
+        SendSerialDataCommand = ReactiveCommand.CreateFromTask<string>(SendSerialDataAsync_Clicked);
+        OpenMacroWindowCommand = ReactiveCommand.Create(OpenMacroWindowAsync_Clicked);
+        ReadTypeChangedCommand = ReactiveCommand.Create<string>(ReadTypeChanged_Clicked);
+
+        SerialLoggingCommand = ReactiveCommand.Create<object>(StartSerialLogging);
+        SetSerialLogPathCommand = ReactiveCommand.CreateFromTask(OnSelectSerialLogFolder_Click);
+    }
 
     #endregion
     
     #region Command Method
     
     /// <summary>
-    /// Scan Serial Port Path
+    /// Quit Program
     /// </summary>
-    private void ReScanSerialPort()
+    private void QuitProgram()
     {
-        _serialDevice.GetPortPaths();
-    }
-    
-    
-    /// <summary>
-    /// Connect Serial
-    /// </summary>
-    private void ConnectSerialPort()
-    {
-        if (_serialDevice.Connect())
+        _systemLogger.LogInfo("Application Shutdown");
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
         {
-            IsConnected = _serialDevice.IsConnected;
-        }
-        else
-        {
-            _serialDevice.Disconnect();
-            IsConnected = _serialDevice.IsConnected;
-        }
-    }
-    
-    
-    /// <summary>
-    /// Set Serial Port
-    /// </summary>
-    /// <param name="o">Selected Serial Port Radio Item or Serial port path</param>
-    private void ComPortRadio_Clicked(object o)
-    {
-        if (o is OptionRadioItem item)
-        {
-            _serialDevice.SetPortPath(_serialDevice.SerialPortList[item.Value]);
-        }
-        else if (o is string s)
-        {
-            _serialDevice.SetPortPath(s);
+            desktopLifetime.Shutdown();
         }
     }
 
     
+    /// <summary>
+    /// Connect or Disconnect serial port.
+    /// Connection status update on here
+    /// </summary>
+    private void ConnectSerialPort()
+    {
+        if (!IsConnected)
+        {
+            IsConnected = _serialService.Connect();   
+        }
+        else
+        {
+            if (_serialService.Disconnect())
+            {
+                IsConnected = false;   
+            }
+        }
+        
+        _systemLogger.LogSerialConnection(ConnectionConfig.PortName, IsConnected);
+    }
+
+
+    /// <summary>
+    /// If select port, change port name for serial connection
+    /// </summary>
+    /// <param name="o">
+    /// Gets the selected PortInfo. In case of custom settings, it gets a string value for the port connection.
+    /// <list type="bullet">
+    /// <item><see cref="PortInfo"/></item>
+    /// <item><see cref="string"/></item>
+    /// </list>
+    /// </param>
+    private void ComPortRadio_Clicked(object o)
+    {
+        switch (o)
+        {
+            case PortInfo info:
+                PortManager.SelectPort(info.Name);
+                break;
+            case string s:
+                PortManager.CustomSelectPort(s);
+                break;
+        }
+    }
+
+
     /// <summary>
     /// Change Serial Device Settings.
     /// </summary>
@@ -252,26 +284,23 @@ public class MainViewModel : ViewModelBase
         switch (setting)
         {
             case BaudRateType baudRate:                 // BaudRate
-                SerialSettings.BaudRate = baudRate;
+                ConnectionConfig.BaudRate = baudRate;
                 break;
             case ParityType parity:                     // Parity
-                SerialSettings.Parity = parity;
+                ConnectionConfig.Parity = parity;
                 break;
             case DataBitsType dataBits:                 // DataBits
-                SerialSettings.DataBits = dataBits;
+                ConnectionConfig.DataBits = dataBits;
                 break;
             case StopBitsType stopBits:                 // StopBits
-                SerialSettings.StopBits = stopBits;
-                break;
-            default:                                    // Default
-                Debug.WriteLine($"Serial Setting Object: {setting} / Type: {setting?.GetType()}");
+                ConnectionConfig.StopBits = stopBits;
                 break;
         }
         
-        this.RaisePropertyChanged(nameof(SerialSettings));
+        _systemLogger.LogInfo($"Serial Setting set to {setting}");
     }
 
-    
+
     /// <summary>
     /// Convert Serial Buffer Text Type
     /// </summary>
@@ -281,45 +310,41 @@ public class MainViewModel : ViewModelBase
         switch (stringMode)
         {
             case "ASCII":
-                _serialStringManager.ChangeFormat(EncodingBytes.ASCII);
+                _serialMsgProcessor.ChangeFormat(EncodingBytes.ASCII);
                 break;
             case "HEX":
-                _serialStringManager.ChangeFormat(EncodingBytes.HEX);
+                _serialMsgProcessor.ChangeFormat(EncodingBytes.HEX);
                 break;
             case "UTF8":
-                _serialStringManager.ChangeFormat(EncodingBytes.UTF8);
+                _serialMsgProcessor.ChangeFormat(EncodingBytes.UTF8);
                 break;
         }
-
-        SerialStringData = _serialStringManager.GetCurrentString();
     }
-    
-    
+
+
     /// <summary>
-    /// Send Serial Data 
+    /// Send serial data
     /// </summary>
-    /// 
+    /// <param name="data">[<see cref="string"/>] data</param>
     private async Task SendSerialDataAsync_Clicked(string data)
     {
-        if(string.IsNullOrEmpty(data)) return;
-        if (!IsConnected) return;
-        
-        //TODO: String으로 들어온 Hex데이터를 처리해서 Byte로 넘길 수 있도록 수정 필요
-        var byteData = Encoding.UTF8.GetBytes(data);
-        if (await _serialDevice.WriteAsync(byteData))
-        {
-            // Serial Write Success
-        }
+        // If data is null or not connected
+        if (string.IsNullOrEmpty(data) || !IsConnected) return;
+
+        await _serialService.WriteAsync(data);
     }
 
 
+    /// <summary>
+    /// Open macro window
+    /// </summary>
     private void OpenMacroWindowAsync_Clicked()
     {
         var macroWindow = new MacroView
         {
-            DataContext = new MacroViewModel(SendSerialDataAsync_Clicked)
+            DataContext = new MacroViewModel(SendSerialDataCommand)
         };
-
+        
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
         {
             macroWindow.Show(desktopLifetime.MainWindow!);
@@ -334,78 +359,64 @@ public class MainViewModel : ViewModelBase
     /// <param name="type"><see cref="string"/></param>
     private void ReadTypeChanged_Clicked(string type)
     {
-        _serialDevice.CurrentMode = type switch
+        var oldMode = RuntimeConfig.ReadMode;
+        RuntimeConfig.ReadMode = type switch
         {
-            "NewLine" => ReadMode.NewLine,
-            "STX_ETX" => ReadMode.STX_ETX,
-            "Custom" => ReadMode.Custom,
-            _ => _serialDevice.CurrentMode
+            "NewLine" => ReadModeType.NewLine,
+            "STX_ETX" => ReadModeType.StxEtx,
+            "Custom" => ReadModeType.Custom,
+            _ => RuntimeConfig.ReadMode
         };
-    }
-    
-    
-    #endregion
-    
-    #region Serial DataStream Function
-    
-    /// <summary>
-    /// Process the message collected during the buffer
-    /// </summary>
-    /// <param name="messages"><see cref="IList{SerialMessage}"/> Message List</param>
-    /// <returns>Combined <see cref="string"/> Output</returns>
-    private string ProcessMessages(IList<SerialMessage> messages)
-    {
-        foreach (var message in messages)
-        {
-            _serialStringManager.Add(message);
-        }
         
-        return _serialStringManager.GetCurrentString();
+        _systemLogger.LogConfigurationChange("Read Type Changed", oldMode.ToString(), type);
     }
     
     
     /// <summary>
-    /// Update UI
+    /// Start logging received serial data
     /// </summary>
-    /// <param name="result">Show <see cref="string"/> Data</param>
-    private void UpdateUi(string result)
+    /// <param name="sender">Button</param>
+    private void StartSerialLogging(object? sender)
     {
-        SerialStringData = result;
-    }
-    
-    
-    /// <summary>
-    /// Message Received Rate Updater
-    /// </summary>
-    /// <param name="message"><see cref="SerialMessage"/> Message Type</param>
-    private void UpdateDataRate(SerialMessage message)
-    {
-        _messageCount++;
+        var b = sender as Button;
+        
+        if(!IsSerialLogging) _msgLogManager.CreateLogFile();
+        
+        IsSerialLogging = !IsSerialLogging;
+        
+        var text = IsSerialLogging ? "Stop Data Logging" : "Start Data Logging";
+        b!.Content = text;
 
-        if (!_hzStopwatch.IsRunning)
-        {
-            _hzStopwatch.Start();
-        }
-        else if (_hzStopwatch.ElapsedMilliseconds >= 1000)
-        {
-            DataRate = _messageCount / (_hzStopwatch.ElapsedMilliseconds / 1000.0);
-            _messageCount = 0;
-            _hzStopwatch.Restart();
-        }
+        _msgLogManager.IsStartLogging = IsSerialLogging; 
+        _systemLogger.LogInfo($"Serial Message Logging {text}");
     }
 
-    
+
     /// <summary>
-    /// Update Error Message
+    /// Change Log Path on Click Button
     /// </summary>
-    /// <param name="message"><see cref="SerialMessage.MessageType.Error"/> Type Message Data</param>
-    private void UpdateErrorMessage(SerialMessage message)
+    private async Task OnSelectSerialLogFolder_Click()
     {
-        LastErrorMessage = message.ErrorText;
+        // Get folder path when click folder
+        var result = await _selectFolderInteraction.Handle("");
+
+        if (!string.IsNullOrEmpty(result))
+        {
+            _msgLogManager.SerialLogFilePath = result;
+            _systemLogger.LogInfo($"Serial Message Logging Path Changed > {result}");
+        }
     }
-    
+
     #endregion
     
     #endregion
+
+    #region UI Viewer Serial Init
     
+    public IEnumerable<BaudRateType> BaudRatesOption => BaudRateType.StandardBaudRates;
+    public static Array ParityOption => Enum.GetValues(typeof(ParityType));
+    public static Array DataBitsOption => Enum.GetValues(typeof(DataBitsType));
+    public static Array StopBitsOption => Enum.GetValues(typeof(StopBitsType));
+
+    #endregion
 }

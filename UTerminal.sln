@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UTerminal", "UTerminal\UTer
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UTerminal.Desktop", "UTerminal.Desktop\UTerminal.Desktop.csproj", "{A5BEEEC6-E5EC-445D-BE1A-FC8B90E4C1E8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UTerminal.Tests", "UTerminal.Tests\UTerminal.Tests.csproj", "{DE9F4D69-0E30-4921-936E-31B13DB46EB5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{A5BEEEC6-E5EC-445D-BE1A-FC8B90E4C1E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A5BEEEC6-E5EC-445D-BE1A-FC8B90E4C1E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A5BEEEC6-E5EC-445D-BE1A-FC8B90E4C1E8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DE9F4D69-0E30-4921-936E-31B13DB46EB5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE9F4D69-0E30-4921-936E-31B13DB46EB5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DE9F4D69-0E30-4921-936E-31B13DB46EB5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DE9F4D69-0E30-4921-936E-31B13DB46EB5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

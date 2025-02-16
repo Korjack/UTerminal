@@ -15,54 +15,56 @@
          to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
         <vm:MainViewModel />
     </Design.DataContext>
-    
+
     <UserControl.Resources>
-        <cv:BoolToStringConverter x:Key="BoolToStringConverter"/>
-        <cv:CheckSameValueConverter x:Key="CheckSameValueConverter"/>
-        <cv:EnumDescriptionConverter x:Key="EnumDescriptionConverter"/>
-        <cv:ByteToHexStringConverter x:Key="ByteToHexStringConverter"/>
-        <cv:NumberToBaudrateConverter x:Key="NumberToBaudrateConverter"/>
-        <cv:BooleanOrConverter x:Key="BooleanOrConverter"/>
+        <cv:BoolToStringConverter x:Key="BoolToStringConverter" />
+        <cv:CheckSameValueConverter x:Key="CheckSameValueConverter" />
+        <cv:EnumDescriptionConverter x:Key="EnumDescriptionConverter" />
+        <cv:ByteToHexStringConverter x:Key="ByteToHexStringConverter" />
+        <cv:NumberToBaudrateConverter x:Key="NumberToBaudrateConverter" />
+        <cv:BooleanOrConverter x:Key="BooleanOrConverter" />
     </UserControl.Resources>
-    
+
     <Grid ShowGridLines="False">
         <Grid.RowDefinitions>
-            <RowDefinition Height="0.4*"/>
-            <RowDefinition Height="0.2*"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="0.1*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="0.4*" />
+            <RowDefinition Height="0.2*" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="0.1*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        
+
         <!-- 시리얼 연결 옵션 -->
-        <StackPanel Grid.Row="0" 
+        <StackPanel Grid.Row="0"
                     Margin="0, 0, 0, 10"
-                    Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Stretch" Spacing="10" Height="160">
+                    Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Stretch" Spacing="10"
+                    Height="160">
             <StackPanel.Styles>
-                <StyleInclude Source="avares://UTerminal/Styles/SerialDeviceRadioButton.axaml"/>
+                <StyleInclude Source="avares://UTerminal/Styles/SerialDeviceRadioButton.axaml" />
             </StackPanel.Styles>
+            
             <!-- 기본 메뉴 뷰 -->
             <StackPanel>
                 <StackPanel.Styles>
                     <Style Selector="Button">
-                        <Setter Property="HorizontalAlignment" Value="Stretch"/>
-                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                        <Setter Property="HorizontalAlignment" Value="Stretch" />
+                        <Setter Property="HorizontalContentAlignment" Value="Center" />
                     </Style>
                 </StackPanel.Styles>
-                
-                <Button Command="{Binding ConnectCommand}" 
+
+                <Button Command="{Binding ConnectCommand}"
                         Content="{Binding !IsConnected,
                         Converter={StaticResource BoolToStringConverter},
-                        ConverterParameter='Connect,Disconnect'}"/>
-                <Button Command="{Binding ReScanCommand}" IsEnabled="{Binding !IsConnected}" Content="Recan"/>
+                        ConverterParameter='Connect,Disconnect'}" />
+                <Button Command="{Binding ReScanCommand}" IsEnabled="{Binding !IsConnected}" Content="ReScan" />
                 <Button Command="{Binding QuitCommand}">Quit</Button>
             </StackPanel>
             <!-- 기본 메뉴 뷰 -->
-          
+
             <!-- 컴포트 선택 영역 -->
             <Panel IsEnabled="{Binding !IsConnected}">
                 <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
-                    <ItemsControl ItemsSource="{Binding DefaultComPortList}">
+                    <ItemsControl ItemsSource="{Binding PortManager.AvailablePorts}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <UniformGrid Columns="2"></UniformGrid>
@@ -70,19 +72,19 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <RadioButton Content="{Binding Text}"
-                                    GroupName="COMPortGroup"
-                                    IsChecked="{Binding IsSelected}"
-                                    IsEnabled="{Binding IsEnabled}">
-                                    
+                                <RadioButton Content="{Binding Name}"
+                                             GroupName="COMPortGroup"
+                                             IsChecked="{Binding IsSelected}"
+                                             IsEnabled="{Binding IsEnabled}">
+
                                     <Interaction.Behaviors>
                                         <EventTriggerBehavior EventName="Click">
-                                            <InvokeCommandAction 
+                                            <InvokeCommandAction
                                                 Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ComPortRadioChangedCommand}"
-                                                CommandParameter="{Binding}"/>
+                                                CommandParameter="{Binding}" />
                                         </EventTriggerBehavior>
                                     </Interaction.Behaviors>
-                                    
+
                                 </RadioButton>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -90,13 +92,13 @@
                 </Border>
 
                 <TextBlock Text="COM Port"
-                    FontSize="10"
-                    Background="White"
-                    Foreground="Black"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Top"
-                    Margin="0,-10,0,0"
-                    Padding="5"/>
+                           FontSize="10"
+                           Background="White"
+                           Foreground="Black"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Top"
+                           Margin="0,-10,0,0"
+                           Padding="5" />
             </Panel>
             <!-- 컴포트 선택 영역 -->
 
@@ -115,16 +117,17 @@
                                              GroupName="BaudRateGroup">
                                     <RadioButton.IsChecked>
                                         <MultiBinding Converter="{StaticResource CheckSameValueConverter}">
-                                            <Binding/>
-                                            <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).SerialSettings.BaudRate"/>
+                                            <Binding />
+                                            <Binding
+                                                Path="$parent[Window].((vm:MainViewModel)DataContext).ConnectionConfig.BaudRate" />
                                         </MultiBinding>
                                     </RadioButton.IsChecked>
-                                    
+
                                     <Interaction.Behaviors>
                                         <EventTriggerBehavior EventName="Click">
-                                            <InvokeCommandAction 
+                                            <InvokeCommandAction
                                                 Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SerialSettingChangedCommand}"
-                                                CommandParameter="{Binding}"/>
+                                                CommandParameter="{Binding}" />
                                         </EventTriggerBehavior>
                                     </Interaction.Behaviors>
                                 </RadioButton>
@@ -134,23 +137,23 @@
                 </Border>
 
                 <TextBlock Text="Baudrate"
-                    FontSize="10"
-                    Background="White"
-                    Foreground="Black"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Top"
-                    Margin="0,-10,0,0"
-                    Padding="5"/>
+                           FontSize="10"
+                           Background="White"
+                           Foreground="Black"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Top"
+                           Margin="0,-10,0,0"
+                           Padding="5" />
             </Panel>
             <!-- 보드레이드 설정 영역 -->
-            
+
             <!-- 패리티 설정 -->
             <Panel IsEnabled="{Binding !IsConnected}">
                 <Border BorderBrush="Black" BorderThickness="2" CornerRadius="5" Padding="10">
                     <ItemsControl ItemsSource="{Binding ParityOption}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                            <UniformGrid Columns="1"></UniformGrid>
+                                <UniformGrid Columns="1"></UniformGrid>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
@@ -159,16 +162,17 @@
                                              GroupName="ParityGroup">
                                     <RadioButton.IsChecked>
                                         <MultiBinding Converter="{StaticResource CheckSameValueConverter}">
-                                            <Binding/>
-                                            <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).SerialSettings.Parity"/>
+                                            <Binding />
+                                            <Binding
+                                                Path="$parent[Window].((vm:MainViewModel)DataContext).ConnectionConfig.Parity" />
                                         </MultiBinding>
                                     </RadioButton.IsChecked>
-                                    
+
                                     <Interaction.Behaviors>
                                         <EventTriggerBehavior EventName="Click">
-                                            <InvokeCommandAction 
+                                            <InvokeCommandAction
                                                 Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SerialSettingChangedCommand}"
-                                                CommandParameter="{Binding}"/>
+                                                CommandParameter="{Binding}" />
                                         </EventTriggerBehavior>
                                     </Interaction.Behaviors>
                                 </RadioButton>
@@ -178,13 +182,13 @@
                 </Border>
 
                 <TextBlock Text="Parity"
-                    FontSize="10"
-                    Background="White"
-                    Foreground="Black"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Top"
-                    Margin="0,-10,0,0"
-                    Padding="5"/>
+                           FontSize="10"
+                           Background="White"
+                           Foreground="Black"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Top"
+                           Margin="0,-10,0,0"
+                           Padding="5" />
             </Panel>
             <!-- 패리티 설정 -->
 
@@ -203,16 +207,17 @@
                                              GroupName="DataBitsGroup">
                                     <RadioButton.IsChecked>
                                         <MultiBinding Converter="{StaticResource CheckSameValueConverter}">
-                                            <Binding/>
-                                            <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).SerialSettings.DataBits"/>
+                                            <Binding />
+                                            <Binding
+                                                Path="$parent[Window].((vm:MainViewModel)DataContext).ConnectionConfig.DataBits" />
                                         </MultiBinding>
                                     </RadioButton.IsChecked>
-                                    
+
                                     <Interaction.Behaviors>
                                         <EventTriggerBehavior EventName="Click">
-                                            <InvokeCommandAction 
+                                            <InvokeCommandAction
                                                 Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SerialSettingChangedCommand}"
-                                                CommandParameter="{Binding}"/>
+                                                CommandParameter="{Binding}" />
                                         </EventTriggerBehavior>
                                     </Interaction.Behaviors>
                                 </RadioButton>
@@ -222,13 +227,13 @@
                 </Border>
 
                 <TextBlock Text="Data bits"
-                    FontSize="10"
-                    Background="White"
-                    Foreground="Black"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Top"
-                    Margin="0,-10,0,0"
-                    Padding="5"/>
+                           FontSize="10"
+                           Background="White"
+                           Foreground="Black"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Top"
+                           Margin="0,-10,0,0"
+                           Padding="5" />
             </Panel>
             <!-- 데이터 비트 -->
 
@@ -238,7 +243,7 @@
                     <ItemsControl ItemsSource="{Binding StopBitsOption}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                            <UniformGrid Columns="1"></UniformGrid>
+                                <UniformGrid Columns="1"></UniformGrid>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
@@ -247,16 +252,17 @@
                                              GroupName="StopBitsGroup">
                                     <RadioButton.IsChecked>
                                         <MultiBinding Converter="{StaticResource CheckSameValueConverter}">
-                                            <Binding/>
-                                            <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).SerialSettings.StopBits"/>
+                                            <Binding />
+                                            <Binding
+                                                Path="$parent[Window].((vm:MainViewModel)DataContext).ConnectionConfig.StopBits" />
                                         </MultiBinding>
                                     </RadioButton.IsChecked>
-                                    
+
                                     <Interaction.Behaviors>
                                         <EventTriggerBehavior EventName="Click">
-                                            <InvokeCommandAction 
+                                            <InvokeCommandAction
                                                 Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SerialSettingChangedCommand}"
-                                                CommandParameter="{Binding}"/>
+                                                CommandParameter="{Binding}" />
                                         </EventTriggerBehavior>
                                     </Interaction.Behaviors>
                                 </RadioButton>
@@ -266,27 +272,27 @@
                 </Border>
 
                 <TextBlock Text="Stop bits"
-                    FontSize="10"
-                    Background="White"
-                    Foreground="Black"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Top"
-                    Margin="0,-10,0,0"
-                    Padding="5"/>
+                           FontSize="10"
+                           Background="White"
+                           Foreground="Black"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Top"
+                           Margin="0,-10,0,0"
+                           Padding="5" />
             </Panel>
             <!-- 스탑비트 설정 -->
-          
+
         </StackPanel>
         <!-- 시리얼 연결 옵션 -->
-        
+
         <!-- 시리얼 데이터 뷰 옵션 -->
-        <StackPanel Grid.Row="1" 
+        <StackPanel Grid.Row="1"
                     Margin="0, 0, 0, 5" Spacing="10"
                     Orientation="Horizontal">
             <StackPanel.Styles>
                 <StyleInclude Source="avares://UTerminal/Styles/SerialSettingRadioButton.axaml" />
             </StackPanel.Styles>
-            
+
             <!-- 인코딩 타입 선택 -->
             <Panel>
                 <Border BorderBrush="Gray" BorderThickness="2" Padding="5">
@@ -297,7 +303,7 @@
                             <Interaction.Behaviors>
                                 <EventTriggerBehavior EventName="Click">
                                     <InvokeCommandAction Command="{Binding EncodingBytesChangedCommand}"
-                                                         CommandParameter="ASCII"/>
+                                                         CommandParameter="ASCII" />
                                 </EventTriggerBehavior>
                             </Interaction.Behaviors>
                         </RadioButton>
@@ -306,7 +312,7 @@
                             <Interaction.Behaviors>
                                 <EventTriggerBehavior EventName="Click">
                                     <InvokeCommandAction Command="{Binding EncodingBytesChangedCommand}"
-                                                         CommandParameter="HEX"/>
+                                                         CommandParameter="HEX" />
                                 </EventTriggerBehavior>
                             </Interaction.Behaviors>
                         </RadioButton>
@@ -315,13 +321,13 @@
                             <Interaction.Behaviors>
                                 <EventTriggerBehavior EventName="Click">
                                     <InvokeCommandAction Command="{Binding EncodingBytesChangedCommand}"
-                                                         CommandParameter="UTF8"/>
+                                                         CommandParameter="UTF8" />
                                 </EventTriggerBehavior>
                             </Interaction.Behaviors>
                         </RadioButton>
                     </StackPanel>
                 </Border>
-                
+
                 <TextBlock Text="Encoding"
                            FontSize="10"
                            Background="White"
@@ -329,10 +335,10 @@
                            HorizontalAlignment="Center"
                            VerticalAlignment="Top"
                            Margin="0,-10,0,0"
-                           Padding="5"/>
+                           Padding="5" />
             </Panel>
             <!-- 인코딩 타입 선택 -->
-            
+
             <!-- 버퍼 읽기모드 선택 -->
             <Panel>
                 <Border BorderBrush="Gray" BorderThickness="2" Padding="5">
@@ -343,7 +349,7 @@
                             <Interaction.Behaviors>
                                 <EventTriggerBehavior EventName="Click">
                                     <InvokeCommandAction Command="{Binding ReadTypeChangedCommand}"
-                                                         CommandParameter="NewLine"/>
+                                                         CommandParameter="NewLine" />
                                 </EventTriggerBehavior>
                             </Interaction.Behaviors>
                         </RadioButton>
@@ -352,7 +358,7 @@
                             <Interaction.Behaviors>
                                 <EventTriggerBehavior EventName="Click">
                                     <InvokeCommandAction Command="{Binding ReadTypeChangedCommand}"
-                                                         CommandParameter="STX_ETX"/>
+                                                         CommandParameter="STX_ETX" />
                                 </EventTriggerBehavior>
                             </Interaction.Behaviors>
                         </RadioButton>
@@ -361,13 +367,13 @@
                             <Interaction.Behaviors>
                                 <EventTriggerBehavior EventName="Click">
                                     <InvokeCommandAction Command="{Binding ReadTypeChangedCommand}"
-                                                         CommandParameter="Custom"/>
+                                                         CommandParameter="Custom" />
                                 </EventTriggerBehavior>
                             </Interaction.Behaviors>
                         </RadioButton>
                     </StackPanel>
                 </Border>
-                
+
                 <TextBlock Text="ReadType"
                            FontSize="10"
                            Background="White"
@@ -375,17 +381,17 @@
                            HorizontalAlignment="Center"
                            VerticalAlignment="Top"
                            Margin="0,-10,0,0"
-                           Padding="5"/>
+                           Padding="5" />
             </Panel>
             <!-- 버퍼 읽기모드 선택 -->
-            
+
             <!-- 패킷 크기 설정 -->
             <Panel>
                 <Panel.IsEnabled>
                     <MultiBinding Converter="{StaticResource BooleanOrConverter}">
                         <MultiBinding.Bindings>
-                            <Binding Path="#StxEtx.IsChecked"/>
-                            <Binding Path="#CustomStxEtx.IsChecked"/>
+                            <Binding Path="#StxEtx.IsChecked" />
+                            <Binding Path="#CustomStxEtx.IsChecked" />
                         </MultiBinding.Bindings>
                     </MultiBinding>
                 </Panel.IsEnabled>
@@ -393,8 +399,8 @@
                     <NumericUpDown VerticalAlignment="Center"
                                    ShowButtonSpinner="False"
                                    FormatString="0"
-                                   Text="{Binding SerialSettings.PacketSizeText, UpdateSourceTrigger=LostFocus}"
-                                   HorizontalContentAlignment="Center"/>
+                                   Text="{Binding RuntimeConfig.PacketSizeText, UpdateSourceTrigger=LostFocus}"
+                                   HorizontalContentAlignment="Center" />
                 </Border>
                 <TextBlock Text="Packet Size"
                            FontSize="10"
@@ -403,10 +409,10 @@
                            HorizontalAlignment="Center"
                            VerticalAlignment="Top"
                            Margin="0,-10,0,0"
-                           Padding="5"/>
+                           Padding="5" />
             </Panel>
             <!-- 패킷 크기 설정 -->
-            
+
             <!-- 커스텀 STX ETX -->
             <Panel IsEnabled="{Binding #CustomStxEtx.IsChecked}">
                 <Border BorderBrush="Gray" BorderThickness="2" Padding="5">
@@ -414,26 +420,26 @@
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Top"
                                        Text="STX"
-                                       HorizontalAlignment="Center"/>
+                                       HorizontalAlignment="Center" />
                             <TextBox VerticalContentAlignment="Center"
                                      HorizontalContentAlignment="Center"
                                      MaxLength="2"
-                                     Text="{Binding SerialSettings.CustomSTX, Converter={StaticResource ByteToHexStringConverter}}"
-                                     KeyDown="CustomStxEtx_OnKeyDown"/>
+                                     Text="{Binding RuntimeConfig.CustomStx, Converter={StaticResource ByteToHexStringConverter}}"
+                                     KeyDown="CustomStxEtx_OnKeyDown" />
                         </DockPanel>
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Top"
                                        Text="ETX"
-                                       HorizontalAlignment="Center"/>
+                                       HorizontalAlignment="Center" />
                             <TextBox VerticalContentAlignment="Center"
                                      HorizontalContentAlignment="Center"
                                      MaxLength="2"
-                                     Text="{Binding SerialSettings.CustomETX, Converter={StaticResource ByteToHexStringConverter}}"
-                                     KeyDown="CustomStxEtx_OnKeyDown"/>
+                                     Text="{Binding RuntimeConfig.CustomEtx, Converter={StaticResource ByteToHexStringConverter}}"
+                                     KeyDown="CustomStxEtx_OnKeyDown" />
                         </DockPanel>
                     </StackPanel>
                 </Border>
-                
+
                 <TextBlock Text="Custom STX-ETX"
                            FontSize="10"
                            Background="White"
@@ -441,15 +447,15 @@
                            HorizontalAlignment="Center"
                            VerticalAlignment="Top"
                            Margin="0,-10,0,0"
-                           Padding="5"/>
+                           Padding="5" />
             </Panel>
             <!-- 커스텀 STX ETX -->
-            
+
             <!-- Custom ComPort -->
             <Panel IsEnabled="{Binding !IsConnected}">
                 <Border BorderBrush="Gray" BorderThickness="2" Padding="5">
                     <StackPanel Spacing="5" Margin="0, 8, 0, 0">
-                        <RadioButton x:Name="CustomPortPathRadioButton" 
+                        <RadioButton x:Name="CustomPortPathRadioButton"
                                      Content="Custom ComPort"
                                      GroupName="COMPortGroup">
                         </RadioButton>
@@ -458,14 +464,15 @@
                                  Watermark="Write port path">
                             <Interaction.Behaviors>
                                 <EventTriggerBehavior EventName="LostFocus">
-                                    <InvokeCommandAction Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ComPortRadioChangedCommand}"
-                                                         CommandParameter="{Binding #CustomPortPathTextBox.Text}"/>
+                                    <InvokeCommandAction
+                                        Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ComPortRadioChangedCommand}"
+                                        CommandParameter="{Binding #CustomPortPathTextBox.Text}" />
                                 </EventTriggerBehavior>
                             </Interaction.Behaviors>
                         </TextBox>
                     </StackPanel>
                 </Border>
-                
+
                 <TextBlock Text="Custom ComPort"
                            FontSize="10"
                            Background="White"
@@ -473,26 +480,27 @@
                            HorizontalAlignment="Center"
                            VerticalAlignment="Top"
                            Margin="0,-10,0,0"
-                           Padding="5"/>
+                           Padding="5" />
             </Panel>
             <!-- Custom ComPort -->
-            
+
             <!-- Custom Baudrate -->
             <Panel IsEnabled="{Binding !IsConnected}">
                 <Border BorderBrush="Gray" BorderThickness="2" Padding="5">
                     <StackPanel Spacing="5" Margin="0, 8, 0, 0">
-                        <RadioButton x:Name="CustomBaudrateButton" 
+                        <RadioButton x:Name="CustomBaudrateButton"
                                      Content="Custom Baudrate"
                                      GroupName="BaudRateGroup">
                         </RadioButton>
-                        <NumericUpDown Value="{Binding SerialSettings.BaudRate, Converter={StaticResource NumberToBaudrateConverter}}"
-                                       IsEnabled="{Binding #CustomBaudrateButton.IsChecked}"
-                                       FormatString="0"
-                                       ShowButtonSpinner="False"
-                                       Watermark="Write baudrate as number"/>
+                        <NumericUpDown
+                            Value="{Binding ConnectionConfig.BaudRate, Converter={StaticResource NumberToBaudrateConverter}}"
+                            IsEnabled="{Binding #CustomBaudrateButton.IsChecked}"
+                            FormatString="0"
+                            ShowButtonSpinner="False"
+                            Watermark="Write baudrate as number" />
                     </StackPanel>
                 </Border>
-                
+
                 <TextBlock Text="Custom Baudrate"
                            FontSize="10"
                            Background="White"
@@ -500,13 +508,43 @@
                            HorizontalAlignment="Center"
                            VerticalAlignment="Top"
                            Margin="0,-10,0,0"
-                           Padding="5"/>
+                           Padding="5" />
             </Panel>
             <!-- Custom Baudrate -->
+
+            <!-- For logging serial data -->
+            <Panel>
+                <Border BorderBrush="Gray" BorderThickness="2" Padding="5">
+                    <StackPanel Margin="0, 8, 0, 0">
+                        <Button Content="Start Data Logging"
+                                FontSize="10"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding SerialLoggingCommand}"
+                                CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+                        <Button Content="Change Log Path"
+                                IsEnabled="{Binding !IsSerialLogging}"
+                                FontSize="10"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Command="{Binding SetSerialLogPathCommand}" />
+                    </StackPanel>
+                </Border>
             
+                <TextBlock Text="Logging"
+                           FontSize="10"
+                           Background="White"
+                           Foreground="Black"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Top"
+                           Margin="0,-10,0,0"
+                           Padding="5" />
+            </Panel>
+            <!-- For logging serial data -->
+
         </StackPanel>
         <!-- 시리얼 데이터 뷰 옵션 -->
-        
+
         <!-- 시리얼 데이터 뷰 -->
         <Border Grid.Row="2" BorderBrush="Black" BorderThickness="2" CornerRadius="8" Padding="5">
             <avaloniaEdit:TextEditor IsReadOnly="True"
@@ -514,24 +552,25 @@
                                      VerticalScrollBarVisibility="Visible"
                                      FontSize="13"
                                      FontWeight="Light">
-                
+
                 <Interaction.Behaviors>
-                    <behaviors:DocumentTextBindingBehavior Text="{Binding SerialStringData, Mode=OneWay}" AutoScrollToEnd="True"/>
+                    <behaviors:DocumentTextBindingBehavior Text="{Binding ReceivedSerialData, Mode=OneWay}"
+                                                           AutoScrollToEnd="True" />
                 </Interaction.Behaviors>
-                
+
                 <avaloniaEdit:TextEditor.Options>
-                    <avaloniaEdit:TextEditorOptions AllowScrollBelowDocument="False"/>
+                    <avaloniaEdit:TextEditorOptions AllowScrollBelowDocument="False" />
                 </avaloniaEdit:TextEditor.Options>
             </avaloniaEdit:TextEditor>
         </Border>
         <!-- 시리얼 데이터 뷰 -->
-        
+
         <!-- 데이터 송신 -->
         <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="0.05*"/>
-                <ColumnDefinition Width="0.06*"/>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="0.05*" />
+                <ColumnDefinition Width="0.06*" />
             </Grid.ColumnDefinitions>
             <TextBox Grid.Column="0" x:Name="SerialWriteTextBox"
                      VerticalContentAlignment="Center"
@@ -539,37 +578,37 @@
                      BorderThickness="2"
                      Watermark="Write Serial Data">
                 <TextBox.KeyBindings>
-                    <KeyBinding Gesture="Enter" 
+                    <KeyBinding Gesture="Enter"
                                 Command="{Binding SendSerialDataCommand}"
-                                CommandParameter="{Binding #SerialWriteTextBox.Text}"/>
+                                CommandParameter="{Binding #SerialWriteTextBox.Text}" />
                 </TextBox.KeyBindings>
             </TextBox>
-            <Button Grid.Column="1" Content="Send" 
+            <Button Grid.Column="1" Content="Send"
                     Command="{Binding SendSerialDataCommand}"
-                    CommandParameter="{Binding #SerialWriteTextBox.Text}"/>
+                    CommandParameter="{Binding #SerialWriteTextBox.Text}" />
             <Button Grid.Column="2" Content="Macro"
-                    Command="{Binding OpenMacroWindowCommand}"/>
+                    Command="{Binding OpenMacroWindowCommand}" />
         </Grid>
         <!-- 데이터 송신 -->
-        
+
         <!-- 상태표시줄 -->
         <Grid Grid.Row="4" ColumnDefinitions="*,Auto">
-
+        
             <!-- Last Error Message -->
-            <Border Grid.Column="0" 
-                    Background="Gray" Opacity="0.3"
-                    Padding="10, 0" Margin="0, 0, 5, 0">
-                <TextBlock Text="{Binding LastErrorMessage}"/>
-            </Border>
+            <!-- <Border Grid.Column="0" -->
+            <!--         Background="Gray" Opacity="0.3" -->
+            <!--         Padding="10, 0" Margin="0, 0, 5, 0"> -->
+            <!--     <TextBlock Text="{Binding LastErrorMessage}" /> -->
+            <!-- </Border> -->
             <!-- Last Error Message -->
-            
+        
             <!-- 데이터 전송 속도 -->
-            <TextBlock  Grid.Column="1" 
-                        TextAlignment="Center" 
-                        Text="{Binding DataRate, StringFormat='Data Rate: {0:N2} Hz'}"/>
+            <TextBlock Grid.Column="1"
+                       TextAlignment="Center"
+                       Text="{Binding MessageRate, StringFormat='Data Rate: {0:N2} Hz'}" />
             <!-- 데이터 전송 속도 -->
         </Grid>
         <!-- 상태표시줄 -->
     </Grid>
-    
+
 </UserControl>

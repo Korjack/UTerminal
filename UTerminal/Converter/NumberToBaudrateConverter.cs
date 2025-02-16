@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using Avalonia.Data.Converters;
 using UTerminal.Models;
+using UTerminal.Models.Serial;
 
 namespace UTerminal.Converter;
 

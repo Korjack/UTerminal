@@ -27,6 +27,28 @@ Through UTerminal, users can select encoding types such as ASCII, HEX, and UTF-8
 ![main.png](Images/main.png "MacOS Running")
 
 
+# User Guide
+
+## Receiving Data
+1. Select your serial port and communication settings.
+2. Click [Connect] button to start communication.
+
+※ If ports are not visible, click [Rescan] button to refresh.
+※ When using STX/ETX protocol, you can set packet size for parsing
+
+## Sending Data
+1. Enter data in the input box at the bottom of the screen.
+2. Press Enter key or click [Send] button to transmit data.
+
+### How to Input Hexadecimal Data
+You can input hex data by prefixing with $ symbol in both sending box and macro window.
+
+Example)
+- $01 → 0x01
+- $FF → 0xFF
+
+※ This hex input method can also be used in the macro window.
+
 # Build
 
 ## Requirements
