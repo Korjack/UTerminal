@@ -46,15 +46,17 @@ public class PortManager : ReactiveObject
     public void ScanPort()
     {
         var portNames = SerialPort.GetPortNames();
+        var portListLog = string.Empty;
         
-        _systemLogger.LogInfo($"Scanned Port list\n{portNames}");
         AvailablePorts.Clear();
 
         // Add port name at AvailablePorts
         foreach (var portName in portNames)
         {
             AvailablePorts.Add(new PortInfo(portName));
+            portListLog += $"\t {portName}\n";
         }
+        _systemLogger.LogInfo($"Scanned Port list\n{portListLog}");
 
         // If not full AvailablePorts, fill empty port
         for (int i = portNames.Length; i < _maxPort; i++)
