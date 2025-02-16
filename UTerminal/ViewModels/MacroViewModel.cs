@@ -2,11 +2,11 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia;
 using ReactiveUI;
 using UTerminal.Models.Utils;
+using UTerminal.Models.Utils.Logger;
 
 namespace UTerminal.ViewModels;
 
@@ -14,6 +14,7 @@ namespace UTerminal.ViewModels;
 public class MacroViewModel : ViewModelBase
 {
     private readonly MacroSettings _settings;
+    private readonly SystemLogger _systemLogger = SystemLogger.Instance;
     
     public ObservableCollection<MacroItems> MacroSendItems { get; }
     
@@ -43,6 +44,8 @@ public class MacroViewModel : ViewModelBase
                 MacroText = string.Empty
             });
         }
+        
+        _systemLogger.LogInfo("Macro Window Opened");
     }
 
     

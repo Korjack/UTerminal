@@ -3,6 +3,7 @@ using System.IO.Ports;
 using System.Linq;
 using ReactiveUI;
 using UTerminal.Models.Serial;
+using UTerminal.Models.Utils.Logger;
 
 namespace UTerminal.Models.PortManager;
 
@@ -11,6 +12,8 @@ public class PortManager : ReactiveObject
     private readonly SerialConnectionConfiguration _connectionConfig;
     private readonly int _maxPort;
     private PortInfo? _selectedPort;
+    
+    private readonly SystemLogger _systemLogger = SystemLogger.Instance;
     
     /// <summary>
     /// List of connectable ports read from the system
@@ -33,6 +36,8 @@ public class PortManager : ReactiveObject
         AvailablePorts = new ObservableCollection<PortInfo>();
         
         ScanPort();
+        
+        _systemLogger.LogInfo("Port Manager Initialized");
     }
     
     /// <summary>
@@ -42,6 +47,7 @@ public class PortManager : ReactiveObject
     {
         var portNames = SerialPort.GetPortNames();
         
+        _systemLogger.LogInfo($"Scanned Port list\n{portNames}");
         AvailablePorts.Clear();
 
         // Add port name at AvailablePorts
@@ -75,11 +81,13 @@ public class PortManager : ReactiveObject
     /// <param name="portName">[<see cref="string"/>] port path</param>
     public void SelectPort(string portName)
     {
-        if (SelectedPort != null)
-        {
-            if(SelectedPort.Name == portName) return;
+        var oldPort = SelectedPort;
         
-            SelectedPort.IsSelected = false;
+        if (oldPort != null)
+        {
+            if(oldPort.Name == portName) return;
+        
+            oldPort.IsSelected = false;
         }
 
         // Select port from AvailablePorts
@@ -89,6 +97,8 @@ public class PortManager : ReactiveObject
             newSelection.IsEnabled = true;
             SelectedPort = newSelection;
             _connectionConfig.PortName = newSelection.Name;
+            
+            _systemLogger.LogConfigurationChange("Set Port", oldPort.Name, newSelection.Name);
         }
     }
 
@@ -99,8 +109,11 @@ public class PortManager : ReactiveObject
     /// <remarks>See <see cref="PortInfo"/></remarks>
     public void CustomSelectPort(string portName)
     {
+        var oldPort = SelectedPort;
         var newPort = new PortInfo(portName);
         SelectedPort = newPort;
         _connectionConfig.PortName = newPort.Name;
+        
+        _systemLogger.LogConfigurationChange("Set Custom Port", oldPort.Name, newPort.Name);
     }
 }

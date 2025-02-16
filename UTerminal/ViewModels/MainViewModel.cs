@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -12,22 +11,22 @@ using UTerminal.Models.Messages;
 using UTerminal.Models.Messages.Interfaces;
 using UTerminal.Models.PortManager;
 using UTerminal.Models.Serial;
-using UTerminal.Models.Serial.Interfaces;
-using UTerminal.Models.Utils;
+using UTerminal.Models.Utils.Logger;
 using UTerminal.Views;
 
 namespace UTerminal.ViewModels;
 
 public class MainViewModel : ViewModelBase
 {
-    private readonly SerialService _serialService;                     // Serial Connection Management
+    private readonly SerialService _serialService;                      // Serial Connection Management
     private readonly SerialMsgProcessor _serialMsgProcessor;            // Converts and processes messages of serial message type.
     
     public SerialConnectionConfiguration ConnectionConfig { get; }      // Settings closely related to serial connection
     public SerialRuntimeConfiguration RuntimeConfig { get; }            // Settings can be changed regardless of connection
-
-    private ULogManager _serialLogManager = null!;                      // Log manager
     public PortManager PortManager { get; }                             // Port Manager for seek port path or set
+    
+    private readonly SerialMsgLogger _msgLogManager = SerialMsgLogger.Instance;     // Serial Message Log Manager
+    private readonly SystemLogger _systemLogger = SystemLogger.Instance;            // System Log Manager
 
     #region Fields
 
@@ -57,7 +56,6 @@ public class MainViewModel : ViewModelBase
         private set => this.RaiseAndSetIfChanged(ref _isSerialLogging, value);
     }
     
-    public string SerialLogFilePath { get; set; } = AppContext.BaseDirectory;
     public double MessageRate => _messageRate.Value;
 
     #endregion
@@ -76,6 +74,8 @@ public class MainViewModel : ViewModelBase
         InitializeSerialCommands();
         InitInteractions();
         InitializeObservable();
+        
+        _systemLogger.LogInfo("Initialized Application");
     }
     
     #region Obserable
@@ -212,6 +212,7 @@ public class MainViewModel : ViewModelBase
     /// </summary>
     private void QuitProgram()
     {
+        _systemLogger.LogInfo("Application Shutdown");
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
         {
             desktopLifetime.Shutdown();
@@ -236,6 +237,8 @@ public class MainViewModel : ViewModelBase
                 IsConnected = false;   
             }
         }
+        
+        _systemLogger.LogSerialConnection(ConnectionConfig.PortName, IsConnected);
     }
 
 
@@ -293,6 +296,8 @@ public class MainViewModel : ViewModelBase
                 ConnectionConfig.StopBits = stopBits;
                 break;
         }
+        
+        _systemLogger.LogInfo($"Serial Setting set to {setting}");
     }
 
 
@@ -354,6 +359,7 @@ public class MainViewModel : ViewModelBase
     /// <param name="type"><see cref="string"/></param>
     private void ReadTypeChanged_Clicked(string type)
     {
+        var oldMode = RuntimeConfig.ReadMode;
         RuntimeConfig.ReadMode = type switch
         {
             "NewLine" => ReadModeType.NewLine,
@@ -361,6 +367,8 @@ public class MainViewModel : ViewModelBase
             "Custom" => ReadModeType.Custom,
             _ => RuntimeConfig.ReadMode
         };
+        
+        _systemLogger.LogConfigurationChange("Read Type Changed", oldMode.ToString(), type);
     }
     
     
@@ -371,18 +379,16 @@ public class MainViewModel : ViewModelBase
     private void StartSerialLogging(object? sender)
     {
         var b = sender as Button;
-
-        if (!IsSerialLogging)
-        {
-            _serialLogManager = new ULogManager("SerialDataReceived", new LogConfig
-            {
-                FilePath = Path.Combine(SerialLogFilePath, $"DataReceived-{DateTime.Now:yyyyMMdd HHmmss}.log"),
-                Layout = "[%date] %logger => %message%newline"
-            });
-        }
-
+        
+        if(!IsSerialLogging) _msgLogManager.CreateLogFile();
+        
         IsSerialLogging = !IsSerialLogging;
-        b!.Content = IsSerialLogging ? "Stop Data Logging" : "Start Data Logging";
+        
+        var text = IsSerialLogging ? "Stop Data Logging" : "Start Data Logging";
+        b!.Content = text;
+
+        _msgLogManager.IsStartLogging = IsSerialLogging; 
+        _systemLogger.LogInfo($"Serial Message Logging {text}");
     }
 
 
@@ -396,8 +402,8 @@ public class MainViewModel : ViewModelBase
 
         if (!string.IsNullOrEmpty(result))
         {
-            SerialLogFilePath = result;
-            _serialLogManager.ChangeLogFilePath(SerialLogFilePath); // Change path
+            _msgLogManager.SerialLogFilePath = result;
+            _systemLogger.LogInfo($"Serial Message Logging Path Changed > {result}");
         }
     }
 
