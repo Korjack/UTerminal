@@ -53,6 +53,6 @@ public partial class MainView : ReactiveUserControl<MainViewModel>
                     AllowMultiple = false
                 });
 
-        context.SetOutput(storageFolders[0].Path.LocalPath);
+        context.SetOutput(storageFolders.Count > 0 ? storageFolders[0].Path.LocalPath : string.Empty);
     }
 }
