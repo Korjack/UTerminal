@@ -405,6 +405,10 @@ public class MainViewModel : ViewModelBase
             _msgLogManager.SerialLogFilePath = result;
             _systemLogger.LogInfo($"Serial Message Logging Path Changed > {result}");
         }
+        else
+        {
+            _systemLogger.LogInfo($"Serial Message Logging Path not changed > {_msgLogManager.SerialLogFilePath}");
+        }
     }
 
     #endregion
