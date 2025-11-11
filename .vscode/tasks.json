@@ -1,0 +1,24 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "dotnet",
+			"task": "watch UTerminal",
+			"file": "/Users/kimduhyeon/Github/UTerminal/UTerminal/UTerminal.csproj",
+			"problemMatcher": [],
+			"label": "dotnet: watch UTerminal",
+			"group": "build"
+		},
+		{
+			"type": "dotnet",
+			"task": "watch UTerminal.Desktop",
+			"file": "/Users/kimduhyeon/Github/UTerminal/UTerminal.Desktop/UTerminal.Desktop.csproj",
+			"problemMatcher": [],
+			"label": "dotnet: watch UTerminal.Desktop",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		}
+	]
+}

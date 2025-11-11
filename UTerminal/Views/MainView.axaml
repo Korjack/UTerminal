@@ -58,6 +58,7 @@
                         ConverterParameter='Connect,Disconnect'}" />
                 <Button Command="{Binding ReScanCommand}" IsEnabled="{Binding !IsConnected}" Content="ReScan" />
                 <Button Command="{Binding QuitCommand}">Quit</Button>
+                <Button Command="{Binding DevCommand}">Dev</Button>
             </StackPanel>
             <!-- 기본 메뉴 뷰 -->
 

@@ -1,0 +1,197 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:UTerminal.ViewModels"
+        xmlns:converter="clr-namespace:UTerminal.Converter"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="UTerminal.Views.CustomParseView"
+        x:DataType="vm:CustomParserViewModel"
+        Title="CustomParseView">
+    <Window.Resources>
+        <converter:TypeNeedsLengthConverter x:Key="TypeNeedsLengthConverter"/>
+        <converter:BoolToStatusConverter x:Key="BoolToStatusConverter"/>
+        <converter:BoolToColorConverter x:Key="BoolToColorConverter"/>
+    </Window.Resources>
+
+    <DockPanel Margin="10">
+        <!-- 상단: 통계 및 제어 -->
+        <Border DockPanel.Dock="Top" 
+                BorderBrush="Gray" 
+                BorderThickness="1" 
+                Padding="10" 
+                Margin="0,0,0,10">
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*,*,Auto">
+                <!-- 통계 -->
+                <StackPanel Grid.Row="0" Grid.Column="0">
+                    <TextBlock Text="Total Received" FontSize="10" Foreground="Gray"/>
+                    <TextBlock Text="{Binding TotalReceivedCount}" FontSize="20" FontWeight="Bold"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Row="0" Grid.Column="1">
+                    <TextBlock Text="Success" FontSize="10" Foreground="Gray"/>
+                    <TextBlock Text="{Binding SuccessParseCount}" FontSize="20" FontWeight="Bold" Foreground="Green"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Row="0" Grid.Column="2">
+                    <TextBlock Text="Failed" FontSize="10" Foreground="Gray"/>
+                    <TextBlock Text="{Binding FailedParseCount}" FontSize="20" FontWeight="Bold" Foreground="Red"/>
+                </StackPanel>
+
+                <!-- 제어 버튼 -->
+                <StackPanel Grid.Row="0" Grid.Column="3" Orientation="Horizontal" Spacing="5">
+                    <Button Command="{Binding StartParsingCommand}" 
+                            Content="Start" 
+                            Background="Green" 
+                            Foreground="White"
+                            Width="80"/>
+                    <Button Command="{Binding StopParsingCommand}" 
+                            Content="Stop" 
+                            Background="Red" 
+                            Foreground="White"
+                            Width="80"/>
+                </StackPanel>
+
+                <!-- 상태 표시 -->
+                <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4" 
+                           Margin="0,10,0,0">
+                    <Run Text="Status: "/>
+                    <Run Text="{Binding IsConnected, Converter={StaticResource BoolToStatusConverter}}"
+                         Foreground="{Binding IsConnected, Converter={StaticResource BoolToColorConverter}}"/>
+                    <Run Text=" | "/>
+                    <Run Text="{Binding Parser.LastParseTime, StringFormat='Last: {0:HH:mm:ss.fff}'}"/>
+                </TextBlock>
+            </Grid>
+        </Border>
+
+        <!-- 좌측: 필드 추가 패널 -->
+        <Border DockPanel.Dock="Left" 
+                Width="250" 
+                BorderBrush="Gray" 
+                BorderThickness="1" 
+                Padding="10"
+                Margin="0,0,10,0">
+            <StackPanel Spacing="10">
+                <TextBlock Text="Add Field" FontWeight="Bold" FontSize="16"/>
+                
+                <TextBlock Text="Field Name:"/>
+                <TextBox Text="{Binding FieldName}"/>
+                
+                <TextBlock Text="Data Type:"/>
+                <ComboBox ItemsSource="{Binding AvailableTypes}"
+                          SelectedItem="{Binding SelectedType}"/>
+                
+                <TextBlock Text="Length:" 
+                           IsVisible="{Binding SelectedType, Converter={StaticResource TypeNeedsLengthConverter}}"/>
+                <NumericUpDown Value="{Binding FieldLength}"
+                               Minimum="1"
+                               Maximum="256"
+                               IsVisible="{Binding SelectedType, Converter={StaticResource TypeNeedsLengthConverter}}"/>
+                
+                <Button Command="{Binding AddFieldCommand}" 
+                        Content="Add Field"
+                        HorizontalAlignment="Stretch"/>
+                
+                <Separator/>
+                
+                <Button Command="{Binding ClearFieldsCommand}" 
+                        Content="Clear All"
+                        HorizontalAlignment="Stretch"/>
+                
+                <Separator/>
+                
+                <Button Command="{Binding SavePresetCommand}" 
+                        Content="Save Preset"
+                        HorizontalAlignment="Stretch"/>
+                <Button Command="{Binding LoadPresetCommand}" 
+                        Content="Load Preset"
+                        HorizontalAlignment="Stretch"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 우측: 필드 목록 및 파싱 결과 -->
+        <Grid RowDefinitions="Auto,*,Auto,*">
+            <!-- 필드 목록 -->
+            <TextBlock Grid.Row="0" 
+                       Text="Parse Format" 
+                       FontWeight="Bold" 
+                       FontSize="16" 
+                       Margin="0,0,0,5"/>
+            
+            <Border Grid.Row="1" 
+                    BorderBrush="Gray" 
+                    BorderThickness="1" 
+                    Margin="0,0,0,10">
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding Parser.ParseFormat}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="LightGray" 
+                                        BorderThickness="0,0,0,1" 
+                                        Padding="5">
+                                    <Grid ColumnDefinitions="30,150,80,*,Auto">
+                                        <TextBlock Grid.Column="1" 
+                                                   Text="{Binding Name}" 
+                                                   FontWeight="Bold"/>
+                                        <TextBlock Grid.Column="2" 
+                                                   Text="{Binding ParseDataType}" 
+                                                   Foreground="Gray"
+                                                   FontSize="11"/>
+                                        <TextBlock Grid.Column="3" 
+                                                   Text="{Binding Length, StringFormat='Len: {0}'}"
+                                                   Foreground="Gray"
+                                                   FontSize="11"
+                                                   IsVisible="{Binding ParseDataType, Converter={StaticResource TypeNeedsLengthConverter}}"/>
+                                        <Button Grid.Column="4"
+                                                Content="X"
+                                                Command="{Binding $parent[Window].((vm:CustomParserViewModel)DataContext).RemoveFieldCommand}"
+                                                CommandParameter="{Binding}"
+                                                Background="Red"
+                                                Foreground="White"
+                                                Padding="5,0"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
+
+            <!-- 파싱 결과 -->
+            <TextBlock Grid.Row="2" 
+                       Text="Parsed Data" 
+                       FontWeight="Bold" 
+                       FontSize="16" 
+                       Margin="0,0,0,5"/>
+            
+            <Border Grid.Row="3" 
+                    BorderBrush="Gray" 
+                    BorderThickness="1">
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding Parser.ParseFormat}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="LightGray" 
+                                        BorderThickness="0,0,0,1" 
+                                        Padding="8">
+                                    <Grid ColumnDefinitions="150,100,*">
+                                        <TextBlock Grid.Column="0" 
+                                                   Text="{Binding Name}" 
+                                                   FontWeight="Bold"/>
+                                        <TextBlock Grid.Column="1" 
+                                                   Text="{Binding ParseDataType}" 
+                                                   Foreground="Gray"/>
+                                        <TextBlock Grid.Column="2" 
+                                                   Text="{Binding DisplayValue}" 
+                                                   FontFamily="Consolas"
+                                                   FontSize="13"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>

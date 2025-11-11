@@ -33,7 +33,7 @@ public class MainViewModel : ViewModelBase
     private bool _isConnected;                                              // Serial connection status
     private string _receivedSerialData = string.Empty;                      // Convert to string from serial message
     private bool _isSerialLogging;                                          // Serial data logging status
-    private ObservableAsPropertyHelper<double> _messageRate;                // Message hz
+    private ObservableAsPropertyHelper<double> _messageRate = ObservableAsPropertyHelper<double>.Default();                // Message hz
 
     #endregion
 
@@ -155,6 +155,8 @@ public class MainViewModel : ViewModelBase
     public ICommand ConnectCommand { get; set; } = null!;               // Connect Serial
     public ICommand ReScanCommand { get; set; } = null!;                // Scan Port List
 
+    public ICommand DevCommand { get; set; } = null!;                   // For Dev
+
     #endregion
 
     #region Serial Options
@@ -189,6 +191,7 @@ public class MainViewModel : ViewModelBase
         QuitCommand = ReactiveCommand.Create(QuitProgram);
         ConnectCommand = ReactiveCommand.Create(ConnectSerialPort);
         ReScanCommand = ReactiveCommand.Create(PortManager.ScanPort);
+        DevCommand = ReactiveCommand.Create(OnClickDev);
 
         // 옵션 설정 커맨드
         ComPortRadioChangedCommand = ReactiveCommand.Create<object>(ComPortRadio_Clicked);
@@ -423,4 +426,17 @@ public class MainViewModel : ViewModelBase
     public static Array StopBitsOption => Enum.GetValues(typeof(StopBitsType));
 
     #endregion
+
+    private void OnClickDev()
+    {
+        var customParseView = new CustomParseView
+        {
+            DataContext = new CustomParserViewModel(_serialService)
+        };
+        
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
+        {
+            customParseView.Show(desktopLifetime.MainWindow!);
+        }
+    }
 }
