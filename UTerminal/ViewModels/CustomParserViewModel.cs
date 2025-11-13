@@ -14,15 +14,15 @@ namespace UTerminal.ViewModels;
 /// </summary>
 public class CustomParserViewModel : ReactiveObject
 {
+    #region private
+
     private readonly ISerialService _serialService;
     private IDisposable? _serialSubscription;
 
-    // Parser
-    public CustomSerialParser Parser { get; set; }
-    public ObservableCollection<ParseDataType> AvailableTypes { get; set; }
-
     // Field 추가용 프로퍼티
+    private ParseFormatPreset? _currentPreset;
     private ParseDataType _selectedType;
+    private string _presetName = "";
     private string _fieldName = "";
     private int _fieldLength = 1;
 
@@ -32,10 +32,29 @@ public class CustomParserViewModel : ReactiveObject
     private int _successParseCount;
     private int _failedParseCount;
 
+    #endregion
+
+    #region public
+
+    public CustomSerialParser Parser { get; }
+    public ObservableCollection<ParseDataType> AvailableTypes { get; set; }
+
+    public ParseFormatPreset? CurrentPreset
+    {
+        get => _currentPreset;
+        set => this.RaiseAndSetIfChanged(ref _currentPreset, value);
+    }
+    
     public ParseDataType SelectedType
     {
         get => _selectedType;
         set => this.RaiseAndSetIfChanged(ref _selectedType, value);
+    }
+    
+    public string PresetName
+    {
+        get => _presetName;
+        set => this.RaiseAndSetIfChanged(ref _presetName, value);
     }
 
     public string FieldName
@@ -74,18 +93,15 @@ public class CustomParserViewModel : ReactiveObject
         set => this.RaiseAndSetIfChanged(ref _failedParseCount, value);
     }
 
-    // Commands
-    public ReactiveCommand<Unit, Unit> AddFieldCommand { get; }
-    public ReactiveCommand<ParseData, Unit> RemoveFieldCommand { get; }
-    public ReactiveCommand<Unit, Unit> StartParsingCommand { get; }
-    public ReactiveCommand<Unit, Unit> StopParsingCommand { get; }
-    public ReactiveCommand<Unit, Unit> ClearFieldsCommand { get; }
-    public ReactiveCommand<Unit, Unit> SavePresetCommand { get; }
-    public ReactiveCommand<Unit, Unit> LoadPresetCommand { get; }
-
+    #endregion
+    
+    
+    /// <summary>
+    /// 초기화
+    /// </summary>
+    /// <param name="serialService">사용중인 시리얼 서비스</param>
     public CustomParserViewModel(ISerialService serialService)
     {
-        // DI에서 SerialService 가져오기 (또는 파라미터로 받기)
         _serialService = serialService;
 
         // Parser 초기화
@@ -95,10 +111,33 @@ public class CustomParserViewModel : ReactiveObject
         AvailableTypes = new ObservableCollection<ParseDataType>(
             Enum.GetValues<ParseDataType>()
         );
+        
+        // 커멘드 초기화
+        InitCommands();
 
-        SelectedType = ParseDataType.Int8;
+        SelectedType = ParseDataType.Byte;
+    }
+    
+    # region Commands
+    
+    // Commands
+    public ReactiveCommand<Unit, Unit> AddPresetCommand { get; private set; }
+    public ReactiveCommand<Unit, Unit> RemovePresetCommand { get; private set; }
+    public ReactiveCommand<Unit, Unit> AddFieldCommand { get; private set; }
+    public ReactiveCommand<ParseData, Unit> RemoveFieldCommand { get; private set; }
+    public ReactiveCommand<Unit, Unit> StartParsingCommand { get; private set; }
+    public ReactiveCommand<Unit, Unit> StopParsingCommand { get; private set; }
+    public ReactiveCommand<Unit, Unit> ClearFieldsCommand { get; private set; }
+    public ReactiveCommand<Unit, Unit> SavePresetCommand { get; private set; }
+    public ReactiveCommand<Unit, Unit> LoadPresetCommand { get; private set; }
 
-        // Commands 초기화
+    /// <summary>
+    /// 커멘드 초기화
+    /// </summary>
+    private void InitCommands()
+    {
+        AddPresetCommand = ReactiveCommand.Create(AddNewPreset);
+        RemovePresetCommand = ReactiveCommand.Create(RemovePreset);
         AddFieldCommand = ReactiveCommand.Create(AddField);
         RemoveFieldCommand = ReactiveCommand.Create<ParseData>(RemoveField);
         StartParsingCommand = ReactiveCommand.Create(StartParsing,
@@ -109,18 +148,35 @@ public class CustomParserViewModel : ReactiveObject
         SavePresetCommand = ReactiveCommand.Create(SavePreset);
         LoadPresetCommand = ReactiveCommand.Create(LoadPreset);
     }
+    
+    # endregion
+
+    #region Command Funcs
+
+    /// <summary>
+    /// 프리셋 추가
+    /// </summary>
+    private void AddNewPreset()
+    {
+        var newPreset = new ParseFormatPreset();
+        Parser.ParseFormatPresets.Add(newPreset);
+        CurrentPreset = newPreset;
+    }
+
+    private void RemovePreset()
+    {
+        if(CurrentPreset == null) return;
+        Parser.ParseFormatPresets.Remove(CurrentPreset);
+    }
 
     /// <summary>
     /// 필드 추가
     /// </summary>
     private void AddField()
     {
-        var newField = new ParseData(SelectedType, FieldName)
-        {
-            Length = FieldLength
-        };
+        var newField = new ParseData(SelectedType, FieldName, FieldLength);
 
-        Parser.ParseFormat.Add(newField);
+        CurrentPreset?.ParseFormat.Add(newField);
 
         // 입력 필드 초기화
         FieldName = "";
@@ -132,7 +188,7 @@ public class CustomParserViewModel : ReactiveObject
     /// </summary>
     private void RemoveField(ParseData field)
     {
-        Parser.ParseFormat.Remove(field);
+        CurrentPreset?.ParseFormat.Remove(field);
     }
 
     /// <summary>
@@ -140,7 +196,9 @@ public class CustomParserViewModel : ReactiveObject
     /// </summary>
     private void ClearFields()
     {
-        Parser.ParseFormat.Clear();
+        if(CurrentPreset is null) return;
+        
+        CurrentPreset.ParseFormat.Clear();
         ResetStatistics();
     }
 
@@ -149,7 +207,7 @@ public class CustomParserViewModel : ReactiveObject
     /// </summary>
     private void StartParsing()
     {
-        if (Parser.ParseFormat.Count == 0)
+        if (Parser.ParseFormatPresets.Count == 0)
         {
             // TODO: 필드가 없으면 경고 표시
             return;
@@ -221,4 +279,6 @@ public class CustomParserViewModel : ReactiveObject
     {
         // TODO: JSON 등에서 프리셋 불러오기
     }
+    
+    #endregion
 }

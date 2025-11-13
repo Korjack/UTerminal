@@ -1,21 +1,26 @@
 using System;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using ReactiveUI;
+using UTerminal.Models.Formatters;
 using UTerminal.Models.Messages.Interfaces;
+using UTerminal.Models.Serial;
 
 namespace UTerminal.Models.Parser;
 
 /// <summary>
 /// 커스텀 시리얼 데이터 파서
 /// </summary>
-public class CustomSerialParser : INotifyPropertyChanged
+public sealed class CustomSerialParser : ReactiveObject
 {
+    private readonly MessageFormatter _formatter = new();
+    
     private DateTime _lastParseTime;
     private bool _isValid;
+    private int _cachedTotalLength = -1;
 
-    public ObservableCollection<ParseData> ParseFormat { get; set; } = new();
+    public ObservableCollection<ParseFormatPreset> ParseFormatPresets { get; set; } = [];
 
     /// <summary>
     /// 마지막 파싱 시간
@@ -23,11 +28,7 @@ public class CustomSerialParser : INotifyPropertyChanged
     public DateTime LastParseTime
     {
         get => _lastParseTime;
-        private set
-        {
-            _lastParseTime = value;
-            OnPropertyChanged();
-        }
+        private set => this.RaiseAndSetIfChanged(ref _lastParseTime, value);
     }
 
     /// <summary>
@@ -36,19 +37,27 @@ public class CustomSerialParser : INotifyPropertyChanged
     public bool IsValid
     {
         get => _isValid;
-        private set
-        {
-            _isValid = value;
-            OnPropertyChanged();
-        }
+        private set => this.RaiseAndSetIfChanged(ref _isValid, value);
     }
 
     /// <summary>
     /// 전체 데이터 길이 계산
     /// </summary>
-    public int GetTotalLength()
+    private int GetTotalLength()
     {
-        return ParseFormat.Sum(p => p.GetSize());
+        // 캐시가 유효하면 재사용
+        if (_cachedTotalLength >= 0)
+            return _cachedTotalLength;
+
+        // LINQ 제거
+        int total = 0;
+        foreach (var preset in ParseFormatPresets)
+        {
+            total += preset.GetTotalLength();
+        }
+
+        _cachedTotalLength = total;
+        return total;
     }
 
     /// <summary>
@@ -58,90 +67,119 @@ public class CustomSerialParser : INotifyPropertyChanged
     /// <param name="stxValue">STX 값 (기본: 0x02)</param>
     /// <param name="etxValue">ETX 값 (기본: 0x03)</param>
     /// <returns>파싱 성공 여부</returns>
-    public bool ParseMessage(ISerialMessage message, byte stxValue = 0x02, byte etxValue = 0x03)
+    public bool ParseMessage(ISerialMessage message)
+    {
+        bool anySuccess = false;
+        var dataLength = message.Data.Length;
+    
+        foreach (var preset in ParseFormatPresets)
+        {
+            if(preset.ParseFormat.Count == 0) continue;
+            
+            // ✅ 길이 체크를 먼저해서 불필요한 파싱 회피
+            if (dataLength < preset.GetTotalLength())
+            {
+                preset.IsValid = false;
+                continue;
+            }
+        
+            bool success = ParsePreset(preset, message.Data);
+            preset.IsValid = success;
+        
+            if (success) anySuccess = true;
+        }
+    
+        LastParseTime = message.Timestamp;
+        IsValid = anySuccess;
+        return anySuccess;
+    }
+    
+    private bool ParsePreset(ParseFormatPreset preset, byte[] data)
     {
         try
         {
-            // 데이터 길이 체크
-            if (message.Data.Length < GetTotalLength())
+            int offset = 0;
+        
+            foreach (var parseData in preset.ParseFormat)
             {
-                IsValid = false;
-                return false;
-            }
+                if (offset + parseData.Size > data.Length) return false;
+            
+                parseData.ParsedValue = parseData.ParsedValue = parseData.ParseDataType switch
+                {
+                    ParseDataType.STX => ValidateSTX(data[offset], SerialConstants.ControlCharacters.STX),
+                    ParseDataType.ETX => ValidateETX(data[offset], SerialConstants.ControlCharacters.ETX),
+                    ParseDataType.Int8 => (sbyte)data[offset],
+                    ParseDataType.UInt8 => data[offset],
+                    ParseDataType.Byte => FormatAsHex(data, offset, parseData.Length),
+                    ParseDataType.String => FormatAsString(data, offset, parseData.Length),
 
-            // STX/ETX 검증
-            if (!Validate(message.Data, stxValue, etxValue))
-            {
-                IsValid = false;
-                return false;
+                    ParseDataType.Int16 => Read<short>(data, offset),
+                    ParseDataType.UInt16 => Read<ushort>(data, offset),
+                    ParseDataType.Int32 => Read<int>(data, offset),
+                    ParseDataType.UInt32 => Read<uint>(data, offset),
+                    ParseDataType.Float => Read<float>(data, offset),
+                    ParseDataType.Double => Read<double>(data, offset),
+                    _ => null
+                };
+                offset += parseData.Size;
             }
-
-            // 파싱 실행
-            Parse(message.Data);
-            LastParseTime = message.Timestamp;
-            IsValid = true;
             return true;
         }
-        catch
-        {
-            IsValid = false;
-            return false;
-        }
+        catch (InvalidOperationException) { return false; }  // ✅ 이 Preset만 실패
+        catch (Exception) { return false; }
     }
 
     /// <summary>
-    /// 데이터 파싱 수행
+    /// STX 값 검증
     /// </summary>
-    private void Parse(byte[] data)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private byte ValidateSTX(byte actualValue, byte expectedValue)
     {
-        int offset = 0;
-        foreach (var parseData in ParseFormat)
+        if (actualValue != expectedValue)
         {
-            parseData.ParsedValue = parseData.ParseDataType switch
-            {
-                ParseDataType.STX => data[offset],
-                ParseDataType.ETX => data[offset],
-                ParseDataType.Int8 => (sbyte)data[offset],
-                ParseDataType.UInt8 => data[offset],
-                ParseDataType.Byte => data.Skip(offset).Take(parseData.Length).ToArray(),
-                ParseDataType.Hex => data.Skip(offset).Take(parseData.Length).ToArray(),
-                ParseDataType.Int16 => BitConverter.ToInt16(data, offset),
-                ParseDataType.UInt16 => BitConverter.ToUInt16(data, offset),
-                ParseDataType.Int32 => BitConverter.ToInt32(data, offset),
-                ParseDataType.UInt32 => BitConverter.ToUInt32(data, offset),
-                ParseDataType.Float => BitConverter.ToSingle(data, offset),
-                ParseDataType.Double => BitConverter.ToDouble(data, offset),
-                ParseDataType.String => System.Text.Encoding.ASCII.GetString(data, offset, parseData.Length).TrimEnd('\0'),
-                _ => null
-            };
-
-            offset += parseData.GetSize();
+            throw new InvalidOperationException($"STX mismatch: expected 0x{expectedValue:X2}, got 0x{actualValue:X2}");
         }
+        return actualValue;
     }
 
     /// <summary>
-    /// STX, ETX 검증
+    /// ETX 값 검증
     /// </summary>
-    private bool Validate(byte[] data, byte stxValue, byte etxValue)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private byte ValidateETX(byte actualValue, byte expectedValue)
     {
-        if (data.Length < GetTotalLength()) return false;
-
-        var firstParse = ParseFormat.FirstOrDefault();
-        var lastParse = ParseFormat.LastOrDefault();
-
-        if (firstParse?.ParseDataType == ParseDataType.STX && data[0] != stxValue)
-            return false;
-
-        if (lastParse?.ParseDataType == ParseDataType.ETX && data[GetTotalLength() - 1] != etxValue)
-            return false;
-
-        return true;
+        if (actualValue != expectedValue)
+        {
+            throw new InvalidOperationException($"ETX mismatch: expected 0x{expectedValue:X2}, got 0x{actualValue:X2}");
+        }
+        return actualValue;
+    }
+    
+    
+    /// <summary>
+    /// 데이터를 HEX 문자열로 포맷
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private string FormatAsHex(byte[] data, int offset, int length)
+    {
+        var segment = data.AsSpan(offset, length);
+        return _formatter.FormatData(segment, EncodingBytes.HEX);
     }
 
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    /// <summary>
+    /// 데이터를 문자열로 포맷
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private string FormatAsString(byte[] data, int offset, int length)
     {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        var segment = data.AsSpan(offset, length);
+        return _formatter.FormatData(segment, EncodingBytes.ASCII).TrimEnd('\0');
+    }
+    
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static T Read<T>(byte[] data, int offset) where T : struct
+    {
+        return MemoryMarshal.Read<T>(data.AsSpan(offset, Unsafe.SizeOf<T>()));
     }
 }

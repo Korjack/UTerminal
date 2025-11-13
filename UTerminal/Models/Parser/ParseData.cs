@@ -1,20 +1,19 @@
-using System;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using ReactiveUI;
 
 namespace UTerminal.Models.Parser;
 
 /// <summary>
 /// 파싱 데이터 클래스 (UI 바인딩 지원)
 /// </summary>
-public class ParseData : INotifyPropertyChanged
+public sealed class ParseData : ReactiveObject
 {
     private object? _parsedValue;
     private string _displayValue = "";
 
     public ParseDataType ParseDataType { get; }
+    public int Size { get; }
     public string Name { get; set; }
-    public int Length { get; set; } = 1;
+    public int Length { get; } = 1;
 
     /// <summary>
     /// 파싱된 값
@@ -24,12 +23,10 @@ public class ParseData : INotifyPropertyChanged
         get => _parsedValue;
         set
         {
-            if (_parsedValue != value)
-            {
-                _parsedValue = value;
-                OnPropertyChanged();
-                UpdateDisplayValue();
-            }
+            if (_parsedValue == value) return;
+            
+            this.RaiseAndSetIfChanged(ref _parsedValue, value);
+            UpdateDisplayValue();
         }
     }
 
@@ -39,26 +36,22 @@ public class ParseData : INotifyPropertyChanged
     public string DisplayValue
     {
         get => _displayValue;
-        private set
-        {
-            if (_displayValue != value)
-            {
-                _displayValue = value;
-                OnPropertyChanged();
-            }
-        }
+        private set => this.RaiseAndSetIfChanged(ref _displayValue, value);
     }
 
-    public ParseData(ParseDataType parseDataType, string name = "")
+    public ParseData(ParseDataType parseDataType, string name = "", int length = 1)
     {
         ParseDataType = parseDataType;
+        Length = length;
+        
         Name = string.IsNullOrEmpty(name) ? parseDataType.ToString() : name;
+        Size = CalculateSize();
     }
 
     /// <summary>
     /// 데이터 타입의 크기를 반환
     /// </summary>
-    public int GetSize()
+    private int CalculateSize()
     {
         return ParseDataType switch
         {
@@ -67,7 +60,6 @@ public class ParseData : INotifyPropertyChanged
             ParseDataType.Int8 => 1,
             ParseDataType.UInt8 => 1,
             ParseDataType.Byte => Length,
-            ParseDataType.Hex => Length,
             ParseDataType.Int16 => 2,
             ParseDataType.UInt16 => 2,
             ParseDataType.Int32 => 4,
@@ -94,18 +86,10 @@ public class ParseData : INotifyPropertyChanged
         {
             ParseDataType.STX => $"0x{ParsedValue:X2}",
             ParseDataType.ETX => $"0x{ParsedValue:X2}",
-            ParseDataType.Hex => BitConverter.ToString((byte[])ParsedValue).Replace("-", " "),
-            ParseDataType.Byte => BitConverter.ToString((byte[])ParsedValue).Replace("-", " "),
+            ParseDataType.Byte => ParsedValue.ToString() ?? "-",
             ParseDataType.Float => $"{ParsedValue:F2}",
             ParseDataType.Double => $"{ParsedValue:F4}",
             _ => ParsedValue.ToString() ?? "-"
         };
-    }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

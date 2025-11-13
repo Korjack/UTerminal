@@ -17,7 +17,7 @@
     </Design.DataContext>
 
     <UserControl.Resources>
-        <cv:BoolToStringConverter x:Key="BoolToStringConverter" />
+        <cv:BoolToActivatedConverter x:Key="BoolToStringConverter" />
         <cv:CheckSameValueConverter x:Key="CheckSameValueConverter" />
         <cv:EnumDescriptionConverter x:Key="EnumDescriptionConverter" />
         <cv:ByteToHexStringConverter x:Key="ByteToHexStringConverter" />

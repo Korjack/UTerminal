@@ -48,7 +48,7 @@ public class MessageFormatter
     /// <param name="data">Raw byte data to format</param>
     /// <param name="format">Encoding format to use</param>
     /// <returns>Formatted string representation of the data</returns>
-    public string FormatData(byte[] data, EncodingBytes format)
+    public string FormatData(ReadOnlySpan<byte> data, EncodingBytes format)
     {
         return format switch
         {
@@ -59,7 +59,12 @@ public class MessageFormatter
         };
     }
 
-    private static string StringFromBufferOptimized(byte[] data, Encoding encoding)
+    public string FormatData(byte[] data, EncodingBytes foramt)
+    {
+        return FormatData(data.AsSpan(), foramt);
+    }
+
+    private static string StringFromBufferOptimized(ReadOnlySpan<byte> data, Encoding encoding)
     {
         var charCount = encoding.GetCharCount(data);
         var buffer = SharedBuffer.Value;
@@ -69,11 +74,11 @@ public class MessageFormatter
             SharedBuffer.Value = buffer;
         }
 
-        encoding.GetChars(data, 0, data.Length, buffer, 0);
+        encoding.GetChars(data, buffer);
         return new string(buffer, 0, charCount);
     }
 
-    private static string HexFromBufferOptimized(byte[] data)
+    private static string HexFromBufferOptimized(ReadOnlySpan<byte> data)
     {
         if (data.Length == 0) return string.Empty;
 

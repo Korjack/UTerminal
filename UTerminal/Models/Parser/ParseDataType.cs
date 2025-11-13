@@ -4,6 +4,7 @@ public enum ParseDataType
 {
     STX,
     ETX,
+    Byte,
     Int8,
     Int16,
     Int32,
@@ -13,6 +14,6 @@ public enum ParseDataType
     Float,
     Double,
     String,
-    Byte,
-    Hex
+    
+    VariableLength
 }

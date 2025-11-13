@@ -11,9 +11,7 @@ public class TypeNeedsLengthConverter : IValueConverter
     {
         if (value is ParseDataType type)
         {
-            return type == ParseDataType.String || 
-                   type == ParseDataType.Byte || 
-                   type == ParseDataType.Hex;
+            return type is ParseDataType.String or ParseDataType.Byte;
         }
         return false;
     }
