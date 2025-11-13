@@ -24,15 +24,33 @@ def sender():
         while True:
             user_input = input("> ")
 
-            # 숫자로 변환 시도, 실패하면 문자열로 처리
-            try:
-                data = int(user_input)
-            except ValueError:
-                data = user_input
+            tokens = user_input.split()
+            data_bytes = bytearray()
 
-            packet = make_packet(data)
+            for token in tokens:
+                try:
+                    # 0x로 시작하면 16진수로 파싱
+                    if token.startswith('0x') or token.startswith('0X'):
+                        value = int(token, 16)
+                        # 0-255 범위 체크
+                        if 0 <= value <= 255:
+                            data_bytes.append(value)
+                        else:
+                            print(f"경고: {token}은 0-255 범위를 벗어남")
+                    else:
+                        # 10진수로 시도
+                        value = int(token)
+                        if 0 <= value <= 255:
+                            data_bytes.append(value)
+                        else:
+                            print(f"경고: {token}은 0-255 범위를 벗어남")
+                except ValueError:
+                    # 숫자가 아니면 ASCII 문자열로 처리
+                    data_bytes.extend(token.encode('utf-8'))
+
+            packet = make_packet(bytes(data_bytes))
             port.write(packet)
-            print(f"전송: {packet}")
+            print(f"전송: {packet.hex(' ')}")
             time.sleep(0.1)
     except KeyboardInterrupt:
         print("Serial Port Closing...")

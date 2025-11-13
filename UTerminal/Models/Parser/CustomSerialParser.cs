@@ -76,7 +76,7 @@ public sealed class CustomSerialParser : ReactiveObject
         {
             if(preset.ParseFormat.Count == 0) continue;
             
-            // ✅ 길이 체크를 먼저해서 불필요한 파싱 회피
+            // 길이 체크를 먼저해서 불필요한 파싱 회피
             if (dataLength < preset.GetTotalLength())
             {
                 preset.IsValid = false;
@@ -103,25 +103,36 @@ public sealed class CustomSerialParser : ReactiveObject
             foreach (var parseData in preset.ParseFormat)
             {
                 if (offset + parseData.Size > data.Length) return false;
-            
-                parseData.ParsedValue = parseData.ParsedValue = parseData.ParseDataType switch
-                {
-                    ParseDataType.STX => ValidateSTX(data[offset], SerialConstants.ControlCharacters.STX),
-                    ParseDataType.ETX => ValidateETX(data[offset], SerialConstants.ControlCharacters.ETX),
-                    ParseDataType.Int8 => (sbyte)data[offset],
-                    ParseDataType.UInt8 => data[offset],
-                    ParseDataType.Byte => FormatAsHex(data, offset, parseData.Length),
-                    ParseDataType.String => FormatAsString(data, offset, parseData.Length),
 
-                    ParseDataType.Int16 => Read<short>(data, offset),
-                    ParseDataType.UInt16 => Read<ushort>(data, offset),
-                    ParseDataType.Int32 => Read<int>(data, offset),
-                    ParseDataType.UInt32 => Read<uint>(data, offset),
-                    ParseDataType.Float => Read<float>(data, offset),
-                    ParseDataType.Double => Read<double>(data, offset),
-                    _ => null
-                };
-                offset += parseData.Size;
+                if (parseData.LinkData is { ParsedValue: not null })
+                {
+                    var length = (byte)parseData.LinkData.ParsedValue;
+                    parseData.ParsedValue = FormatAsHex(data, offset, length);
+                    offset += length;
+                }
+                else
+                {
+                    parseData.ParsedValue = parseData.ParsedValue = parseData.ParseDataType switch
+                    {
+                        ParseDataType.STX => ValidateSTX(data[offset], SerialConstants.ControlCharacters.STX),
+                        ParseDataType.ETX => ValidateETX(data[offset], SerialConstants.ControlCharacters.ETX),
+                        ParseDataType.Int8 => (sbyte)data[offset],
+                        ParseDataType.UInt8 => data[offset],
+                        ParseDataType.Byte => FormatAsHex(data, offset, parseData.Length),
+                        ParseDataType.String => FormatAsString(data, offset, parseData.Length),
+
+                        ParseDataType.Int16 => Read<short>(data, offset),
+                        ParseDataType.UInt16 => Read<ushort>(data, offset),
+                        ParseDataType.Int32 => Read<int>(data, offset),
+                        ParseDataType.UInt32 => Read<uint>(data, offset),
+                        ParseDataType.Float => Read<float>(data, offset),
+                        ParseDataType.Double => Read<double>(data, offset),
+                        _ => null
+                    };
+                    
+                    offset += parseData.Size;
+                }
+                
             }
             return true;
         }

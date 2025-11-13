@@ -97,6 +97,7 @@
                                 <TextBlock Text="Data Type:"/>
                                 <ComboBox ItemsSource="{Binding AvailableTypes}"
                                           SelectedItem="{Binding SelectedType}"/>
+                                <CheckBox Content="Variable data" IsChecked="{Binding IsVariableField}"/>
                                 
                                 <TextBlock Text="Length:" 
                                            IsVisible="{Binding SelectedType, Converter={StaticResource TypeNeedsLengthConverter}}"/>

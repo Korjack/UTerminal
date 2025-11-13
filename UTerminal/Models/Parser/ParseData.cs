@@ -13,7 +13,9 @@ public sealed class ParseData : ReactiveObject
     public ParseDataType ParseDataType { get; }
     public int Size { get; }
     public string Name { get; set; }
-    public int Length { get; } = 1;
+    public int Length { get; }
+
+    public ParseData? LinkData { get; }
 
     /// <summary>
     /// 파싱된 값
@@ -39,9 +41,10 @@ public sealed class ParseData : ReactiveObject
         private set => this.RaiseAndSetIfChanged(ref _displayValue, value);
     }
 
-    public ParseData(ParseDataType parseDataType, string name = "", int length = 1)
+    public ParseData(ParseDataType parseDataType, string name = "", int length = 1, ParseData? linkData = null)
     {
         ParseDataType = parseDataType;
+        LinkData = linkData;
         Length = length;
         
         Name = string.IsNullOrEmpty(name) ? parseDataType.ToString() : name;

@@ -1,7 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Reactive;
 using System.Reactive.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
+using Avalonia.Platform.Storage;
 using ReactiveUI;
 using UTerminal.Models.Messages.Interfaces;
 using UTerminal.Models.Parser;
@@ -14,6 +19,8 @@ namespace UTerminal.ViewModels;
 /// </summary>
 public class CustomParserViewModel : ReactiveObject
 {
+    public Interaction<Unit, IReadOnlyList<IStorageFile>> ShowFilePickerInteraction { get; } = new();
+    
     #region private
 
     private readonly ISerialService _serialService;
@@ -22,6 +29,8 @@ public class CustomParserViewModel : ReactiveObject
     // Field 추가용 프로퍼티
     private ParseFormatPreset? _currentPreset;
     private ParseDataType _selectedType;
+    private ObservableCollection<ParseDataType> _availableTypes;
+    private bool _isVariableField;
     private string _presetName = "";
     private string _fieldName = "";
     private int _fieldLength = 1;
@@ -37,7 +46,12 @@ public class CustomParserViewModel : ReactiveObject
     #region public
 
     public CustomSerialParser Parser { get; }
-    public ObservableCollection<ParseDataType> AvailableTypes { get; set; }
+
+    public ObservableCollection<ParseDataType> AvailableTypes
+    {
+        get => _availableTypes;
+        set => this.RaiseAndSetIfChanged(ref _availableTypes, value);
+    }
 
     public ParseFormatPreset? CurrentPreset
     {
@@ -93,6 +107,32 @@ public class CustomParserViewModel : ReactiveObject
         set => this.RaiseAndSetIfChanged(ref _failedParseCount, value);
     }
 
+    public bool IsVariableField
+    {
+        get => _isVariableField;
+        set
+        {
+            if (value)
+            {
+                AvailableTypes =
+                [
+                    ParseDataType.UInt8,
+                    ParseDataType.UInt16,
+                    ParseDataType.UInt32
+                ];
+                SelectedType = ParseDataType.UInt8;
+            }
+            else
+            {
+                AvailableTypes = new ObservableCollection<ParseDataType>(
+                    Enum.GetValues<ParseDataType>()
+                );
+                SelectedType = ParseDataType.STX;
+            }
+            this.RaiseAndSetIfChanged(ref _isVariableField, value);
+        }
+    }
+
     #endregion
     
     
@@ -115,7 +155,7 @@ public class CustomParserViewModel : ReactiveObject
         // 커멘드 초기화
         InitCommands();
 
-        SelectedType = ParseDataType.Byte;
+        SelectedType = ParseDataType.STX;
     }
     
     # region Commands
@@ -146,7 +186,7 @@ public class CustomParserViewModel : ReactiveObject
             this.WhenAnyValue(x => x.IsConnected));
         ClearFieldsCommand = ReactiveCommand.Create(ClearFields);
         SavePresetCommand = ReactiveCommand.Create(SavePreset);
-        LoadPresetCommand = ReactiveCommand.Create(LoadPreset);
+        LoadPresetCommand = ReactiveCommand.CreateFromTask(LoadPreset);
     }
     
     # endregion
@@ -175,8 +215,13 @@ public class CustomParserViewModel : ReactiveObject
     private void AddField()
     {
         var newField = new ParseData(SelectedType, FieldName, FieldLength);
-
         CurrentPreset?.ParseFormat.Add(newField);
+        
+        if (IsVariableField)
+        {
+            var variableField = new ParseData(ParseDataType.Byte, FieldName,  length: 0, linkData: newField);
+            CurrentPreset?.ParseFormat.Add(variableField);
+        }
 
         // 입력 필드 초기화
         FieldName = "";
@@ -267,17 +312,42 @@ public class CustomParserViewModel : ReactiveObject
     /// <summary>
     /// 프리셋 저장
     /// </summary>
-    private void SavePreset()
+    private async void SavePreset()
     {
-        // TODO: JSON 등으로 프리셋 저장
+        if(CurrentPreset is null) return;
+
+        string exePath = AppDomain.CurrentDomain.BaseDirectory;
+        var json = JsonSerializer.Serialize(CurrentPreset);
+        
+        // 데이터 폴더 경로
+        string dataFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Preset");
+        if (!Directory.Exists(dataFolder))
+        {
+            Directory.CreateDirectory(dataFolder);
+        }
+        
+        await File.WriteAllTextAsync(Path.Combine(dataFolder, CurrentPreset.Name + ".json"), json);
     }
 
     /// <summary>
     /// 프리셋 불러오기
     /// </summary>
-    private void LoadPreset()
+    private async Task LoadPreset()
     {
-        // TODO: JSON 등에서 프리셋 불러오기
+        var files = await ShowFilePickerInteraction.Handle(Unit.Default);
+        
+        if (files.Count > 0)
+        {
+            foreach (var file in files)
+            {
+                var jsonString = await file.OpenReadAsync();
+                var preset = await JsonSerializer.DeserializeAsync<ParseFormatPreset>(jsonString);
+                
+                if(preset == null) continue;
+                
+                Parser.ParseFormatPresets.Add(preset);
+            }
+        }
     }
     
     #endregion

@@ -13,7 +13,5 @@ public enum ParseDataType
     UInt32,
     Float,
     Double,
-    String,
-    
-    VariableLength
+    String
 }
