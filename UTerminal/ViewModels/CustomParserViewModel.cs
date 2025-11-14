@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Text.Json;
@@ -31,15 +32,17 @@ public class CustomParserViewModel : ReactiveObject
     private ParseDataType _selectedType;
     private ObservableCollection<ParseDataType> _availableTypes;
     private bool _isVariableField;
-    private string _presetName = "";
     private string _fieldName = "";
     private int _fieldLength = 1;
+    private string _searchPresetName = "";
 
     // 상태
     private bool _isConnected;
     private int _totalReceivedCount;
     private int _successParseCount;
     private int _failedParseCount;
+
+    private ObservableCollection<ParseFormatPreset> _filteredPreset;
 
     #endregion
 
@@ -63,12 +66,6 @@ public class CustomParserViewModel : ReactiveObject
     {
         get => _selectedType;
         set => this.RaiseAndSetIfChanged(ref _selectedType, value);
-    }
-    
-    public string PresetName
-    {
-        get => _presetName;
-        set => this.RaiseAndSetIfChanged(ref _presetName, value);
     }
 
     public string FieldName
@@ -133,6 +130,18 @@ public class CustomParserViewModel : ReactiveObject
         }
     }
 
+    public string SearchPresetName
+    {
+        get => _searchPresetName;
+        set => this.RaiseAndSetIfChanged(ref _searchPresetName, value);
+    }
+
+    public ObservableCollection<ParseFormatPreset> FilteredPreset
+    {
+        get => _filteredPreset;
+        set => this.RaiseAndSetIfChanged(ref _filteredPreset, value);
+    }
+
     #endregion
     
     
@@ -156,6 +165,11 @@ public class CustomParserViewModel : ReactiveObject
         InitCommands();
 
         SelectedType = ParseDataType.STX;
+
+        this.WhenAnyValue(x => x.SearchPresetName)
+            .Throttle(TimeSpan.FromMilliseconds(300))
+            .ObserveOn(RxApp.MainThreadScheduler)
+            .Subscribe(FilterPresets);
     }
     
     # region Commands
@@ -351,4 +365,18 @@ public class CustomParserViewModel : ReactiveObject
     }
     
     #endregion
+
+    private void FilterPresets(string searchText)
+    {
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            FilteredPreset = Parser.ParseFormatPresets;
+        }
+        else
+        {
+            var filtered = Parser.ParseFormatPresets.Where(x => 
+                x.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+            FilteredPreset = new ObservableCollection<ParseFormatPreset>(filtered);
+        }
+    }
 }

@@ -125,14 +125,6 @@
                                 <Button Command="{Binding LoadPresetCommand}" 
                                         Content="Load Preset"
                                         HorizontalAlignment="Stretch"/>
-                                
-                                <Separator/>
-                                
-                                <Button Command="{Binding RemovePresetCommand}" 
-                                        Content="Remove Preset"
-                                        Foreground="White"
-                                        Background="Red"
-                                        HorizontalAlignment="Stretch"/>
                             </StackPanel>
                         </ScrollViewer>
                     </Border>
@@ -140,7 +132,7 @@
                     <!-- 우측: 필드 목록 -->
                     <Grid Grid.Column="1" RowDefinitions="Auto,*">
                         <!-- 필드 목록 -->
-                        <TextBlock Grid.Row="0" 
+                        <TextBlock Grid.Row="0"
                                    Text="Parse Format" 
                                    FontWeight="Bold" 
                                    FontSize="16" 
@@ -195,21 +187,38 @@
                     CornerRadius="8"
                     Padding="5">
                 <Grid RowDefinitions="Auto, *">
-                    <TextBlock Grid.Row="0" 
-                               Text="Parsed Data" 
-                               FontWeight="Bold" 
-                               FontSize="16" 
-                               Margin="0,0,0,5"/>
+                    <DockPanel Grid.Row="0" Margin="0, 0, 0, 5">
+                        <TextBlock DockPanel.Dock="Left"
+                                   Text="Parsed Data" 
+                                   FontWeight="Bold" 
+                                   FontSize="16"/>
+                        <TextBox DockPanel.Dock="Right"
+                                 Text="{Binding SearchPresetName}"
+                                 Width="250"
+                                 HorizontalAlignment="Right">
+                            <TextBox.InnerLeftContent>
+                                <PathIcon Data="{StaticResource SearchIconPath}"
+                                          Width="16"
+                                          Height="16"
+                                          Margin="4, 0"/>
+                            </TextBox.InnerLeftContent>
+                        </TextBox>
+                    </DockPanel>
                     
                     <Border Grid.Row="1" BorderBrush="Gray" 
                             BorderThickness="1">
-                        <ListBox ItemsSource="{Binding Parser.ParseFormatPresets}"
+                        <ListBox ItemsSource="{Binding FilteredPreset}"
                                  SelectedItem="{Binding CurrentPreset}"
-                                 SelectionMode="Single">
+                                 SelectionMode="Single"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                        <StackPanel Orientation="Horizontal"
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+
+                                        <!-- 프리셋 이름 및 파싱 상태 -->
+                                        <StackPanel Grid.Column="0"
+                                                    Orientation="Horizontal"
                                                     Spacing="10"
                                                     Margin="0, 0, 15, 0">
                                             <TextBox Text="{Binding Name}"
@@ -224,38 +233,52 @@
                                                        HorizontalAlignment="Center"
                                                        Fill="{Binding IsValid, Converter={StaticResource BoolToColorConverter}}"/>
                                         </StackPanel>
-                                        <ItemsControl ItemsSource="{Binding ParseFormat}"
-                                                      FlowDirection="LeftToRight">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <StackPanel Orientation="Horizontal" Spacing="10"/>
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <StackPanel Spacing="5">
-                                                        <TextBlock Text="{Binding Name}"
-                                                                   FontWeight="Bold"
-                                                                   HorizontalAlignment="Center"/>
-                                                        <Border BorderBrush="Gray"
-                                                                BorderThickness="1"
-                                                                CornerRadius="8"
-                                                                Padding="8">
-                                                            <StackPanel>
-                                                                <TextBlock HorizontalAlignment="Center"
-                                                                           TextAlignment="Center"
-                                                                           Text="{Binding ParseDataType}"/>
-                                                                <Separator/>
-                                                                <TextBlock HorizontalAlignment="Center"
-                                                                           TextAlignment="Center"
-                                                                           Text="{Binding DisplayValue}"/>
-                                                            </StackPanel>
-                                                        </Border>
-                                                    </StackPanel>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
+                                        
+                                        <!-- 프리셋 파싱 정보 -->
+                                        <ScrollViewer Grid.Column="1"
+                                                      HorizontalScrollBarVisibility="Auto"
+                                                      VerticalScrollBarVisibility="Disabled">
+                                            <ItemsControl ItemsSource="{Binding ParseFormat}"
+                                                          FlowDirection="LeftToRight"
+                                                          Padding="0, 0, 0, 10">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Orientation="Horizontal" Spacing="10"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Spacing="5">
+                                                            <TextBlock Text="{Binding Name}"
+                                                                       FontWeight="Bold"
+                                                                       HorizontalAlignment="Center"/>
+                                                            <Border BorderBrush="Gray"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="8"
+                                                                    Padding="8">
+                                                                <StackPanel>
+                                                                    <TextBlock HorizontalAlignment="Center"
+                                                                               TextAlignment="Center"
+                                                                               Text="{Binding ParseDataType}"/>
+                                                                    <Separator/>
+                                                                    <TextBlock HorizontalAlignment="Center"
+                                                                               TextAlignment="Center"
+                                                                               Text="{Binding DisplayValue}"/>
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                        
+                                        <Button Grid.Column="2"
+                                                Margin="15, 0, 0, 0"
+                                                Command="{Binding $parent[Window].((vm:CustomParserViewModel)DataContext).RemovePresetCommand}" 
+                                                Content="X"
+                                                Foreground="White"
+                                                Background="Red"/>
+                                    </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
