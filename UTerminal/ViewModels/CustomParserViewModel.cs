@@ -178,7 +178,6 @@ public class CustomParserViewModel : ReactiveObject
     public ReactiveCommand<Unit, Unit> AddPresetCommand { get; private set; }
     public ReactiveCommand<Unit, Unit> RemovePresetCommand { get; private set; }
     public ReactiveCommand<Unit, Unit> AddFieldCommand { get; private set; }
-    public ReactiveCommand<ParseData, Unit> RemoveFieldCommand { get; private set; }
     public ReactiveCommand<Unit, Unit> StartParsingCommand { get; private set; }
     public ReactiveCommand<Unit, Unit> StopParsingCommand { get; private set; }
     public ReactiveCommand<Unit, Unit> ClearFieldsCommand { get; private set; }
@@ -193,7 +192,6 @@ public class CustomParserViewModel : ReactiveObject
         AddPresetCommand = ReactiveCommand.Create(AddNewPreset);
         RemovePresetCommand = ReactiveCommand.Create(RemovePreset);
         AddFieldCommand = ReactiveCommand.Create(AddField);
-        RemoveFieldCommand = ReactiveCommand.Create<ParseData>(RemoveField);
         StartParsingCommand = ReactiveCommand.Create(StartParsing,
             this.WhenAnyValue(x => x.IsConnected, connected => !connected));
         StopParsingCommand = ReactiveCommand.Create(StopParsing,
@@ -203,8 +201,6 @@ public class CustomParserViewModel : ReactiveObject
         LoadPresetCommand = ReactiveCommand.CreateFromTask(LoadPreset);
     }
     
-    # endregion
-
     #region Command Funcs
 
     /// <summary>
@@ -228,12 +224,14 @@ public class CustomParserViewModel : ReactiveObject
     /// </summary>
     private void AddField()
     {
-        var newField = new ParseData(SelectedType, FieldName, FieldLength);
+        if (CurrentPreset == null) return;
+        
+        var newField = new ParseData(CurrentPreset, SelectedType, FieldName, FieldLength);
         CurrentPreset?.ParseFormat.Add(newField);
         
         if (IsVariableField)
         {
-            var variableField = new ParseData(ParseDataType.Byte, FieldName,  length: 0, linkData: newField);
+            var variableField = new ParseData(CurrentPreset!, ParseDataType.Byte, FieldName,  length: 0, linkData: newField);
             CurrentPreset?.ParseFormat.Add(variableField);
         }
 
@@ -241,14 +239,7 @@ public class CustomParserViewModel : ReactiveObject
         FieldName = "";
         FieldLength = 1;
     }
-
-    /// <summary>
-    /// 필드 제거
-    /// </summary>
-    private void RemoveField(ParseData field)
-    {
-        CurrentPreset?.ParseFormat.Remove(field);
-    }
+    
 
     /// <summary>
     /// 모든 필드 제거
@@ -365,7 +356,9 @@ public class CustomParserViewModel : ReactiveObject
     }
     
     #endregion
-
+    
+    # endregion
+    
     private void FilterPresets(string searchText)
     {
         if (string.IsNullOrWhiteSpace(searchText))

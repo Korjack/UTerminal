@@ -14,6 +14,7 @@
         <converter:TypeNeedsLengthConverter x:Key="TypeNeedsLengthConverter"/>
         <converter:BoolToStatusConverter x:Key="BoolToStatusConverter"/>
         <converter:BoolToColorConverter x:Key="BoolToColorConverter"/>
+        <converter:IsNotNullConverter x:Key="IsNotNullConverter"/>
     </Window.Resources>
 
     <DockPanel Margin="10">
@@ -149,22 +150,57 @@
                                             <Border BorderBrush="LightGray"
                                                     BorderThickness="0,0,0,1"
                                                     Padding="5">
-                                                <Grid ColumnDefinitions="30,150,80,*,Auto">
+                                                <Grid ColumnDefinitions="80,150,80,*,Auto">
+                                                    <!-- 업다운 버튼 -->
+                                                    <StackPanel Grid.Column="0"
+                                                                Orientation="Horizontal"
+                                                                Spacing="5"
+                                                                HorizontalAlignment="Center">
+                                                        <Button Content="↑" 
+                                                                Command="{Binding Parent.MoveUpCommand}"
+                                                                CommandParameter="{Binding}"
+                                                                Width="30" Height="30"
+                                                                FontSize="16"
+                                                                VerticalContentAlignment="Center"
+                                                                HorizontalContentAlignment="Center"/>
+    
+                                                        <Button Content="↓" 
+                                                                Command="{Binding Parent.MoveDownCommand}"
+                                                                CommandParameter="{Binding}"
+                                                                Width="30" Height="30"
+                                                                FontSize="16"
+                                                                VerticalContentAlignment="Center"
+                                                                HorizontalContentAlignment="Center"/>
+                                                    </StackPanel>
+                                                    
+                                                    <!-- 이름 -->
                                                     <TextBlock Grid.Column="1"
                                                                Text="{Binding Name}"
-                                                               FontWeight="Bold"/>
+                                                               FontWeight="Bold"
+                                                               VerticalAlignment="Center"/>
+                                                    <!-- 타입 -->
                                                     <TextBlock Grid.Column="2"
                                                                Text="{Binding ParseDataType}"
                                                                Foreground="Gray"
-                                                               FontSize="11"/>
-                                                    <TextBlock Grid.Column="3"
-                                                               Text="{Binding Length, StringFormat='Len: {0}'}"
-                                                               Foreground="Gray"
                                                                FontSize="11"
-                                                               IsVisible="{Binding ParseDataType, Converter={StaticResource TypeNeedsLengthConverter}}"/>
+                                                               VerticalAlignment="Center"/>
+                                                    <!-- 정보 -->
+                                                    <StackPanel Grid.Column="3" Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding Length, StringFormat='Len: {0}'}"
+                                                                   Foreground="Gray"
+                                                                   FontSize="11"
+                                                                   IsVisible="{Binding ParseDataType, Converter={StaticResource TypeNeedsLengthConverter}}"
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding LinkData.Name, StringFormat='Linked: {0}'}"
+                                                                   Foreground="Gray"
+                                                                   FontSize="11"
+                                                                   IsVisible="{Binding LinkData, Converter={StaticResource IsNotNullConverter}}"
+                                                                   VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                    <!-- 삭제 -->
                                                     <Button Grid.Column="4"
                                                             Content="X"
-                                                            Command="{Binding $parent[Window].((vm:CustomParserViewModel)DataContext).RemoveFieldCommand}"
+                                                            Command="{Binding Parent.RemoveCommand}"
                                                             CommandParameter="{Binding}"
                                                             Background="Red"
                                                             Foreground="White"

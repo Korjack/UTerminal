@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Reactive;
 using ReactiveUI;
 
 namespace UTerminal.Models.Parser;
@@ -11,7 +12,7 @@ public sealed class ParseFormatPreset : ReactiveObject
 {
     private string _name = "새 포맷";
     private string _description = "";
-    private bool _isValid = false;
+    private bool _isValid;
     private int _cachedLength = -1;
 
     /// <summary>
@@ -50,6 +51,68 @@ public sealed class ParseFormatPreset : ReactiveObject
     /// 생성 시간
     /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.Now;
+    
+    
+    # region Commands
+    
+    public ReactiveCommand<ParseData, Unit> MoveUpCommand { get; }
+    public ReactiveCommand<ParseData, Unit> MoveDownCommand { get; }
+    public ReactiveCommand<ParseData, Unit> RemoveCommand { get; }
+    
+    
+    # endregion
+
+    #region Command Funcs
+
+    /// <summary>
+    /// 아이템을 위로 이동
+    /// </summary>
+    private void MoveItemUp(ParseData item)
+    {
+        int index = ParseFormat.IndexOf(item);
+        if (index > 0)
+        {
+            ParseFormat.Move(index, index - 1);
+        }
+    }
+    
+    /// <summary>
+    /// 아이템을 아래로 이동
+    /// </summary>
+    private void MoveItemDown(ParseData item)
+    {
+        int index = ParseFormat.IndexOf(item);
+        if (index < ParseFormat.Count - 1)
+        {
+            ParseFormat.Move(index, index + 1);
+        }
+    }
+    
+    /// <summary>
+    /// 아이템 제거
+    /// </summary>
+    private void RemoveItem(ParseData item)
+    {
+        ParseFormat.Remove(item);
+        InvalidateCache();
+    }
+
+    #endregion
+    
+    public ParseFormatPreset()
+    {
+        MoveUpCommand = ReactiveCommand.Create<ParseData>(MoveItemUp);
+        MoveDownCommand = ReactiveCommand.Create<ParseData>(MoveItemDown);
+        RemoveCommand = ReactiveCommand.Create<ParseData>(RemoveItem);
+    }
+    
+    /// <summary>
+    /// 캐시 무효화
+    /// </summary>
+    private void InvalidateCache()
+    {
+        _cachedLength = -1;
+    }
 
     /// <summary>
     /// 전체 데이터 길이 계산
@@ -84,7 +147,7 @@ public sealed class ParseFormatPreset : ReactiveObject
 
         foreach (var parseData in ParseFormat)
         {
-            clone.ParseFormat.Add(new ParseData(parseData.ParseDataType, parseData.Name, parseData.Length));
+            clone.ParseFormat.Add(new ParseData(clone, parseData.ParseDataType, parseData.Name, parseData.Length));
         }
 
         return clone;
