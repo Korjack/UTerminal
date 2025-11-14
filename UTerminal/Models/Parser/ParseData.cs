@@ -10,13 +10,21 @@ public sealed class ParseData : ReactiveObject
     private object? _parsedValue;
     private string _displayValue = "";
 
+    private string _name = "";
+
     public ParseDataType ParseDataType { get; }
     public int Size { get; }
-    public string Name { get; set; }
     public int Length { get; }
 
     public ParseData? LinkData { get; }
     public ParseFormatPreset Parent { get; }
+
+    public string Name
+    {
+        get => _name;
+        set => this.RaiseAndSetIfChanged(ref _name, value);
+    }
+
 
     /// <summary>
     /// 파싱된 값

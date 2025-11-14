@@ -160,24 +160,21 @@
                                                                 Command="{Binding Parent.MoveUpCommand}"
                                                                 CommandParameter="{Binding}"
                                                                 Width="30" Height="30"
-                                                                FontSize="16"
-                                                                VerticalContentAlignment="Center"
-                                                                HorizontalContentAlignment="Center"/>
+                                                                FontSize="16"/>
     
                                                         <Button Content="↓" 
                                                                 Command="{Binding Parent.MoveDownCommand}"
                                                                 CommandParameter="{Binding}"
                                                                 Width="30" Height="30"
-                                                                FontSize="16"
-                                                                VerticalContentAlignment="Center"
-                                                                HorizontalContentAlignment="Center"/>
+                                                                FontSize="16"/>
                                                     </StackPanel>
                                                     
                                                     <!-- 이름 -->
-                                                    <TextBlock Grid.Column="1"
-                                                               Text="{Binding Name}"
-                                                               FontWeight="Bold"
-                                                               VerticalAlignment="Center"/>
+                                                    <TextBox Grid.Column="1"
+                                                             Text="{Binding Name}"
+                                                             FontWeight="Bold"
+                                                             VerticalAlignment="Center"
+                                                             Margin="0, 0, 20, 0"/>
                                                     <!-- 타입 -->
                                                     <TextBlock Grid.Column="2"
                                                                Text="{Binding ParseDataType}"
