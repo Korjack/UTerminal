@@ -9,7 +9,8 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using ReactiveUI;
-using UTerminal.Models.Messages.Interfaces;
+using UTerminal.Models.Messages;
+using UTerminal.Models.Messages.Types;
 using UTerminal.Models.Parser;
 using UTerminal.Models.Serial.Interfaces;
 
@@ -24,8 +25,8 @@ public class CustomParserViewModel : ReactiveObject
     
     #region private
 
-    private readonly ISerialService _serialService;
-    private IDisposable? _serialSubscription;
+    private readonly ISerialPort _serialPort;
+    private IDisposable? _rawDataSubscription;
 
     // Field 추가용 프로퍼티
     private ParseFormatPreset? _currentPreset;
@@ -148,10 +149,10 @@ public class CustomParserViewModel : ReactiveObject
     /// <summary>
     /// 초기화
     /// </summary>
-    /// <param name="serialService">사용중인 시리얼 서비스</param>
-    public CustomParserViewModel(ISerialService serialService)
+    /// <param name="serialPort">사용중인 시리얼 서비스</param>
+    public CustomParserViewModel(ISerialPort serialPort)
     {
-        _serialService = serialService;
+        _serialPort = serialPort;
 
         // Parser 초기화
         Parser = new CustomSerialParser();
@@ -266,30 +267,7 @@ public class CustomParserViewModel : ReactiveObject
         ResetStatistics();
 
         // 시리얼 데이터 스트림 구독
-        var serialDataStream = Observable.FromEventPattern<EventHandler<ISerialMessage>, ISerialMessage>(
-                h => _serialService.MsgReceived += h,
-                h => _serialService.MsgReceived -= h)
-            .Select(x => x.EventArgs);
-
-        _serialSubscription = serialDataStream
-            .ObserveOn(RxApp.TaskpoolScheduler)
-            .Select(msg =>
-            {
-                TotalReceivedCount++;
-                return new { Message = msg, Success = Parser.ParseMessage(msg) };
-            })
-            .ObserveOn(RxApp.MainThreadScheduler)
-            .Subscribe(result =>
-            {
-                if (result.Success)
-                {
-                    SuccessParseCount++;
-                }
-                else
-                {
-                    FailedParseCount++;
-                }
-            });
+        _rawDataSubscription = _serialPort.SubscribeRawData(OnRawDataReceived);
 
         IsConnected = true;
     }
@@ -299,8 +277,8 @@ public class CustomParserViewModel : ReactiveObject
     /// </summary>
     private void StopParsing()
     {
-        _serialSubscription?.Dispose();
-        _serialSubscription = null;
+        _rawDataSubscription?.Dispose();
+        _rawDataSubscription = null;
         IsConnected = false;
     }
 
@@ -358,6 +336,22 @@ public class CustomParserViewModel : ReactiveObject
     #endregion
     
     # endregion
+    
+    private void OnRawDataReceived(SerialMessage message)
+    {
+        TotalReceivedCount++;
+    
+        var success = Parser.ParseMessage(message);
+    
+        if (success)
+        {
+            SuccessParseCount++;
+        }
+        else
+        {
+            FailedParseCount++;
+        }
+    }
     
     private void FilterPresets(string searchText)
     {

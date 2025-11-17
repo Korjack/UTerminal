@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using ReactiveUI;
+using UTerminal.Models.Messages;
 using UTerminal.Models.Messages.Interfaces;
 using UTerminal.Models.Monitoring;
 using UTerminal.Models.Serial.Interfaces;
@@ -16,28 +18,31 @@ public class SerialService : ReactiveObject, ISerialService
     private readonly ISerialPort _serialPort;
     private readonly SerialDataParser _parser;
     private readonly MessageRateMonitor _rateMonitor;
+    private readonly SerialRuntimeConfiguration _runtimeConfig;
 
     private readonly SerialConnectionConfiguration _connectionConfig;
-    
     private readonly SystemLogger _systemLogger = SystemLogger.Instance;
     
     // Serial message receive event handler
     public event EventHandler<ISerialMessage>? MsgReceived;
-    private readonly CancellationTokenSource _msgReadToken = new();
+    
+    private IDisposable? _rawDataSubscription;
+    private readonly List<byte> _bufferList = [];
+    private bool _canBufferAdd;
     
     public bool IsConnected => _serialPort.IsConnected;
-    public double MessageRate => _rateMonitor.CurrentRate;      // message hz
+    public double MessageRate => _rateMonitor.CurrentRate;
     
-    public SerialService(SerialConnectionConfiguration connectionConfig, SerialRuntimeConfiguration runtimeConfig)
+    public SerialService(ISerialPort serialPort,
+                        SerialConnectionConfiguration connectionConfig, 
+                        SerialRuntimeConfiguration runtimeConfig)
     {
+        _serialPort = serialPort;
         _connectionConfig = connectionConfig;
+        _runtimeConfig = runtimeConfig;
         
-        _serialPort = new SerialPortAdapter(connectionConfig, runtimeConfig);
         _parser = new SerialDataParser();
         _rateMonitor = new MessageRateMonitor();
-
-        // When message received, Invoke Handler
-        Task.Run(async () => await OnMessageReceived());
         
         _systemLogger.LogInfo("Initialized Serial Service");
     }
@@ -51,12 +56,26 @@ public class SerialService : ReactiveObject, ISerialService
                               $"\t DataBits: {_connectionConfig.DataBits}\n" +
                               $"\t StopBits: {_connectionConfig.StopBits}\n\n");
         
-        return _serialPort.Open();
+        var result = _serialPort.Open();
+        
+        if (result)
+        {
+            _rawDataSubscription = _serialPort.SubscribeRawData(OnRawDataReceived);
+        }
+        
+        return result;
     }
     
     public bool Disconnect()
     {
         _systemLogger.LogInfo("Disconnect Serial");
+        
+        _rawDataSubscription?.Dispose();
+        _rawDataSubscription = null;
+        
+        _bufferList.Clear();
+        _canBufferAdd = false;
+        
         return _serialPort.Close();
     }
     
@@ -73,51 +92,120 @@ public class SerialService : ReactiveObject, ISerialService
         return result;
     }
 
-    /// <summary>
-    /// Monitors if there are any serial messages to read.
-    /// </summary>
-    private async Task OnMessageReceived()
+    private void OnRawDataReceived(SerialMessage message)
     {
-        var reader = _serialPort.GetReadChannel();
-        var token = _msgReadToken.Token;
-        
-        if(reader == null) return;
-
-        try
+        // ReadMode에 따라 처리
+        switch (_runtimeConfig.ReadMode)
         {
-            _systemLogger.LogInfo("Message Received Start");
-            while (!_msgReadToken.IsCancellationRequested)
+            case ReadModeType.NewLine:
+                ProcessDataNewLine(message);
+                break;
+            case ReadModeType.StxEtx:
+                ProcessDataStxEtx(message);
+                break;
+            case ReadModeType.Custom:
+                ProcessDataStxEtx(message, _runtimeConfig.CustomStx, _runtimeConfig.CustomEtx);
+                break;
+        }
+        _rateMonitor.RegisterMessage();
+    }
+    
+    private void ProcessDataNewLine(SerialMessage message)
+    {
+        var buffer = message.Data;
+        var list = _bufferList;
+        
+        foreach (var currentByte in buffer)
+        {
+            if (currentByte == SerialConstants.ControlCharacters.NEWLINE)
             {
-                var message = await reader.ReadAsync(token);
-                _rateMonitor.RegisterMessage();
-                await RaiseEventAsync(message);
+                if (list.Count > 0 && list[^1] == SerialConstants.ControlCharacters.CARRIAGE_RETURN)
+                {
+                    list.RemoveAt(list.Count - 1);
+                }
+
+                var newBuffer = GetBufferFromList();
+                var newMessage = new SerialMessage()
+                {
+                    Data = newBuffer,
+                    DataSize = newBuffer.Length,
+                    Type = message.Type,
+                    Timestamp = message.Timestamp
+                };
+                
+                RaiseMessageReceived(newMessage);
+            }
+            else
+            {
+                list.Add(currentByte);
             }
         }
-        catch (OperationCanceledException e)
+    }
+
+    private void ProcessDataStxEtx(
+        SerialMessage message,
+        byte stx = SerialConstants.ControlCharacters.STX,
+        byte etx = SerialConstants.ControlCharacters.ETX
+    )
+    {
+        var buffer = message.Data;
+
+        var list = _bufferList;
+        int requiredSize = _runtimeConfig.PacketSize;
+
+        for (int i = 0; i < buffer.Length; i++)
         {
-            _systemLogger.LogSystemError(e);
-            _systemLogger.LogInfo("Message Received Canceled");
+            byte currentByte = buffer[i];
+
+            if (currentByte == stx)
+            {
+                _canBufferAdd = true;
+                list.Add(currentByte);
+                continue;
+            }
+            
+            if(!_canBufferAdd) continue;
+            
+            list.Add(currentByte);
+
+            if (currentByte == etx && list.Count >= requiredSize)
+            {
+                _canBufferAdd = false;
+
+                var newBuffer = GetBufferFromList();
+                var newMessage = new SerialMessage()
+                {
+                    Data = newBuffer,
+                    DataSize = newBuffer.Length,
+                    Type = message.Type,
+                    Timestamp = message.Timestamp
+                };
+                
+                RaiseMessageReceived(newMessage);
+            }
         }
     }
     
-    /// <summary>
-    /// Invoke a function connected to the EventHandler.
-    /// </summary>
-    /// <param name="message"><see cref="ISerialMessage"/></param>
-    private Task RaiseEventAsync(ISerialMessage message)
+    private byte[] GetBufferFromList()
+    {
+        byte[] bytes = new byte[_bufferList.Count];
+        CollectionsMarshal.AsSpan(_bufferList).CopyTo(bytes);
+        _bufferList.Clear();
+        return bytes;
+    }
+    
+    private void RaiseMessageReceived(ISerialMessage message)
     {
         var handler = MsgReceived;
-        if (handler == null) return Task.CompletedTask;
+        if (handler == null) return;
 
         var delegates = handler.GetInvocationList()
             .Cast<EventHandler<ISerialMessage>>();
 
         foreach (var d in delegates)
         {
-            // 각 핸들러를 비동기로 실행하지만 대기하지 않음
+            // 비동기 실행으로 처리 스레드 블로킹 방지
             Task.Run(() => d(this, message));
         }
-        
-        return Task.CompletedTask;
     }
 }
