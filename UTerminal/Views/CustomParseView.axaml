@@ -1,0 +1,323 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:UTerminal.ViewModels"
+        xmlns:converter="clr-namespace:UTerminal.Converter"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="800"
+        x:Class="UTerminal.Views.CustomParseView"
+        x:DataType="vm:CustomParserViewModel"
+        Title="CustomParseView"
+        Width="1000"
+        Height="800">
+    <Window.Resources>
+        <converter:TypeNeedsLengthConverter x:Key="TypeNeedsLengthConverter"/>
+        <converter:BoolToStatusConverter x:Key="BoolToStatusConverter"/>
+        <converter:BoolToColorConverter x:Key="BoolToColorConverter"/>
+        <converter:IsNotNullConverter x:Key="IsNotNullConverter"/>
+    </Window.Resources>
+
+    <DockPanel Margin="10">
+        <!-- 상단: 통계 및 제어 -->
+        <Border DockPanel.Dock="Top" 
+                BorderBrush="Gray" 
+                BorderThickness="1" 
+                Padding="10" 
+                Margin="0,0,0,10">
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*,*,Auto">
+                <!-- 통계 -->
+                <StackPanel Grid.Row="0" Grid.Column="0">
+                    <TextBlock Text="Total Received" FontSize="10" Foreground="Gray"/>
+                    <TextBlock Text="{Binding TotalReceivedCount}" FontSize="20" FontWeight="Bold"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Row="0" Grid.Column="1">
+                    <TextBlock Text="Success" FontSize="10" Foreground="Gray"/>
+                    <TextBlock Text="{Binding SuccessParseCount}" FontSize="20" FontWeight="Bold" Foreground="Green"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Row="0" Grid.Column="2">
+                    <TextBlock Text="Failed" FontSize="10" Foreground="Gray"/>
+                    <TextBlock Text="{Binding FailedParseCount}" FontSize="20" FontWeight="Bold" Foreground="Red"/>
+                </StackPanel>
+
+                <!-- 제어 버튼 -->
+                <StackPanel Grid.Row="0" Grid.Column="3" Orientation="Horizontal" Spacing="5">
+                    <Button Command="{Binding StartParsingCommand}" 
+                            Content="Start" 
+                            Background="Green" 
+                            Foreground="White"
+                            Width="80"/>
+                    <Button Command="{Binding StopParsingCommand}" 
+                            Content="Stop" 
+                            Background="Red" 
+                            Foreground="White"
+                            Width="80"/>
+                </StackPanel>
+
+                <!-- 상태 표시 -->
+                <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4" 
+                           Margin="0,10,0,0">
+                    <Run Text="Status: "/>
+                    <Run Text="{Binding IsConnected, Converter={StaticResource BoolToStatusConverter}}"
+                         Foreground="{Binding IsConnected, Converter={StaticResource BoolToColorConverter}}"/>
+                    <Run Text=" | "/>
+                    <Run Text="{Binding Parser.LastParseTime, StringFormat='Last: {0:HH:mm:ss.fff}'}"/>
+                </TextBlock>
+            </Grid>
+        </Border>
+
+        <Grid RowDefinitions="1*,1*">
+            <Border Grid.Row="0"
+                    BorderBrush="Black"
+                    BorderThickness="2"
+                    CornerRadius="8"
+                    Padding="8"
+                    Margin="0, 0, 0, 5">
+                <Grid ColumnDefinitions="1*,2*">
+                    <!-- 좌측: 필드 추가 패널 -->
+                    <Border BorderBrush="Gray" 
+                            BorderThickness="1" 
+                            Padding="10"
+                            Margin="0,0,10,0">
+                        <ScrollViewer Padding="0, 0, 20, 0">
+                            <StackPanel Spacing="10">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Left" Text="Add Preset" FontWeight="Bold" FontSize="16" VerticalAlignment="Center"/>
+                                    <Button DockPanel.Dock="Right" Command="{Binding AddPresetCommand}" 
+                                            Content="New Preset"
+                                            HorizontalAlignment="Stretch"/>
+                                    <Panel/>
+                                </DockPanel>
+                                
+                                <Separator/>
+                                
+                                <TextBlock Text="Field Name:"/>
+                                <TextBox Text="{Binding FieldName}"/>
+                                
+                                <TextBlock Text="Data Type:"/>
+                                <ComboBox ItemsSource="{Binding AvailableTypes}"
+                                          SelectedItem="{Binding SelectedType}"/>
+                                <CheckBox Content="Variable data" IsChecked="{Binding IsVariableField}"/>
+                                
+                                <TextBlock Text="Length:" 
+                                           IsVisible="{Binding SelectedType, Converter={StaticResource TypeNeedsLengthConverter}}"/>
+                                <NumericUpDown Value="{Binding FieldLength}"
+                                               Minimum="1"
+                                               Maximum="256"
+                                               FormatString="N0"
+                                               IsVisible="{Binding SelectedType, Converter={StaticResource TypeNeedsLengthConverter}}"/>
+                                
+                                <Button Command="{Binding AddFieldCommand}" 
+                                        Content="Add Field"
+                                        HorizontalAlignment="Stretch"/>
+                                
+                                <Separator/>
+                                
+                                <Button Command="{Binding ClearFieldsCommand}" 
+                                        Content="Clear All"
+                                        HorizontalAlignment="Stretch"/>
+                                
+                                <Separator/>
+                                
+                                <Button Command="{Binding SavePresetCommand}" 
+                                        Content="Save Preset"
+                                        HorizontalAlignment="Stretch"/>
+                                <Button Command="{Binding LoadPresetCommand}" 
+                                        Content="Load Preset"
+                                        HorizontalAlignment="Stretch"/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+                    
+                    <!-- 우측: 필드 목록 -->
+                    <Grid Grid.Column="1" RowDefinitions="Auto,*">
+                        <!-- 필드 목록 -->
+                        <TextBlock Grid.Row="0"
+                                   Text="Parse Format" 
+                                   FontWeight="Bold" 
+                                   FontSize="16" 
+                                   Margin="0,0,0,5"/>
+                        
+                        <Border Grid.Row="1" 
+                                BorderBrush="Gray" 
+                                BorderThickness="1" 
+                                Margin="0,0,0,10">
+                            <ScrollViewer>
+                                <ItemsControl ItemsSource="{Binding CurrentPreset.ParseFormat}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="LightGray"
+                                                    BorderThickness="0,0,0,1"
+                                                    Padding="5">
+                                                <Grid ColumnDefinitions="80,150,80,*,Auto">
+                                                    <!-- 업다운 버튼 -->
+                                                    <StackPanel Grid.Column="0"
+                                                                Orientation="Horizontal"
+                                                                Spacing="5"
+                                                                HorizontalAlignment="Center">
+                                                        <Button Content="↑" 
+                                                                Command="{Binding Parent.MoveUpCommand}"
+                                                                CommandParameter="{Binding}"
+                                                                Width="30" Height="30"
+                                                                FontSize="16"/>
+    
+                                                        <Button Content="↓" 
+                                                                Command="{Binding Parent.MoveDownCommand}"
+                                                                CommandParameter="{Binding}"
+                                                                Width="30" Height="30"
+                                                                FontSize="16"/>
+                                                    </StackPanel>
+                                                    
+                                                    <!-- 이름 -->
+                                                    <TextBox Grid.Column="1"
+                                                             Text="{Binding Name}"
+                                                             FontWeight="Bold"
+                                                             VerticalAlignment="Center"
+                                                             Margin="0, 0, 20, 0"/>
+                                                    <!-- 타입 -->
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding ParseDataType}"
+                                                               Foreground="Gray"
+                                                               FontSize="11"
+                                                               VerticalAlignment="Center"/>
+                                                    <!-- 정보 -->
+                                                    <StackPanel Grid.Column="3" Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding Length, StringFormat='Len: {0}'}"
+                                                                   Foreground="Gray"
+                                                                   FontSize="11"
+                                                                   IsVisible="{Binding ParseDataType, Converter={StaticResource TypeNeedsLengthConverter}}"
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding LinkData.Name, StringFormat='Linked: {0}'}"
+                                                                   Foreground="Gray"
+                                                                   FontSize="11"
+                                                                   IsVisible="{Binding LinkData, Converter={StaticResource IsNotNullConverter}}"
+                                                                   VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                    <!-- 삭제 -->
+                                                    <Button Grid.Column="4"
+                                                            Content="X"
+                                                            Command="{Binding Parent.RemoveCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            Background="Red"
+                                                            Foreground="White"
+                                                            Padding="5,0"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Border>
+            
+            <!-- 파싱 결과 -->
+            <Border Grid.Row="1"
+                    BorderBrush="Black"
+                    BorderThickness="2"
+                    CornerRadius="8"
+                    Padding="5">
+                <Grid RowDefinitions="Auto, *">
+                    <DockPanel Grid.Row="0" Margin="0, 0, 0, 5">
+                        <TextBlock DockPanel.Dock="Left"
+                                   Text="Parsed Data" 
+                                   FontWeight="Bold" 
+                                   FontSize="16"/>
+                        <TextBox DockPanel.Dock="Right"
+                                 Text="{Binding SearchPresetName}"
+                                 Width="250"
+                                 HorizontalAlignment="Right">
+                            <TextBox.InnerLeftContent>
+                                <PathIcon Data="{StaticResource SearchIconPath}"
+                                          Width="16"
+                                          Height="16"
+                                          Margin="4, 0"/>
+                            </TextBox.InnerLeftContent>
+                        </TextBox>
+                    </DockPanel>
+                    
+                    <Border Grid.Row="1" BorderBrush="Gray" 
+                            BorderThickness="1">
+                        <ListBox ItemsSource="{Binding FilteredPreset}"
+                                 SelectedItem="{Binding CurrentPreset}"
+                                 SelectionMode="Single"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+
+                                        <!-- 프리셋 이름 및 파싱 상태 -->
+                                        <StackPanel Grid.Column="0"
+                                                    Orientation="Horizontal"
+                                                    Spacing="10"
+                                                    Margin="0, 0, 15, 0">
+                                            <TextBox Text="{Binding Name}"
+                                                     FontWeight="Bold"
+                                                     VerticalAlignment="Center"
+                                                     HorizontalAlignment="Center"
+                                                     VerticalContentAlignment="Center"
+                                                     HorizontalContentAlignment="Center"/>
+                                            <Rectangle Width="16"
+                                                       Height="16"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Center"
+                                                       Fill="{Binding IsValid, Converter={StaticResource BoolToColorConverter}}"/>
+                                        </StackPanel>
+                                        
+                                        <!-- 프리셋 파싱 정보 -->
+                                        <ScrollViewer Grid.Column="1"
+                                                      HorizontalScrollBarVisibility="Auto"
+                                                      VerticalScrollBarVisibility="Disabled">
+                                            <ItemsControl ItemsSource="{Binding ParseFormat}"
+                                                          FlowDirection="LeftToRight"
+                                                          Padding="0, 0, 0, 10">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Orientation="Horizontal" Spacing="10"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Spacing="5">
+                                                            <TextBlock Text="{Binding Name}"
+                                                                       FontWeight="Bold"
+                                                                       HorizontalAlignment="Center"/>
+                                                            <Border BorderBrush="Gray"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="8"
+                                                                    Padding="8">
+                                                                <StackPanel>
+                                                                    <TextBlock HorizontalAlignment="Center"
+                                                                               TextAlignment="Center"
+                                                                               Text="{Binding ParseDataType}"/>
+                                                                    <Separator/>
+                                                                    <TextBlock HorizontalAlignment="Center"
+                                                                               TextAlignment="Center"
+                                                                               Text="{Binding DisplayValue}"/>
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                        
+                                        <Button Grid.Column="2"
+                                                Margin="15, 0, 0, 0"
+                                                Command="{Binding $parent[Window].((vm:CustomParserViewModel)DataContext).RemovePresetCommand}" 
+                                                Content="X"
+                                                Foreground="White"
+                                                Background="Red"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>

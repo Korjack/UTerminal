@@ -1,13 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.IO.Ports;
-using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using ReactiveUI;
 using UTerminal.Models.Messages;
-using UTerminal.Models.Messages.Interfaces;
 using UTerminal.Models.Messages.Types;
 using UTerminal.Models.Serial.Interfaces;
 using UTerminal.Models.Utils.Logger;
@@ -19,31 +16,21 @@ public class SerialPortAdapter : ISerialPort
     // Basic Serial
     private readonly SerialPort _port;
     private SerialConnectionConfiguration _connectionConfig;
-    private SerialRuntimeConfiguration _runtimeConfig;
     
-    // Serial Data Handle
-    private readonly Channel<ISerialMessage> _msgChannel;
-    private readonly List<byte> _bufferList = [];
+    // Raw Data Broadcasting
+    private Action<SerialMessage>[] _rawDataSubscribers = [];
+    private readonly ReaderWriterLockSlim _subscriberLock = new();
+    private int _subscriberCount = 0;
     
-    private SystemLogger _systemLogger = SystemLogger.Instance;
-    private CancellationTokenSource _serialToken = null!;
-    private bool _canBufferAdd;
+    private readonly SystemLogger _systemLogger = SystemLogger.Instance;
+    private CancellationTokenSource? _serialToken;
 
-    public ChannelReader<ISerialMessage> GetReadChannel() => _msgChannel.Reader;
     public bool IsConnected => _port?.IsOpen ?? false;
 
-    public SerialPortAdapter(SerialConnectionConfiguration connectionConfig, SerialRuntimeConfiguration runtimeConfig)
+    public SerialPortAdapter(SerialConnectionConfiguration connectionConfig)
     {
         _port = new SerialPort();
         _connectionConfig = connectionConfig;
-        _runtimeConfig = runtimeConfig;
-        
-        // Init Channel
-        _msgChannel = Channel.CreateUnbounded<ISerialMessage>(new UnboundedChannelOptions
-        {
-            SingleReader = true,
-            SingleWriter = true
-        });
         
         // Set default setting on init
         UpdatePortConfig();
@@ -58,6 +45,48 @@ public class SerialPortAdapter : ISerialPort
             .Subscribe(_ => UpdatePortConfig());
     }
     
+    /// <summary>
+    /// Subscribe to raw data stream
+    /// </summary>
+    public IDisposable SubscribeRawData(Action<SerialMessage> handler)
+    {
+        _subscriberLock.EnterWriteLock();
+        try
+        {
+            // Array resize for performance
+            var newArray = new Action<SerialMessage>[_subscriberCount + 1];
+            Array.Copy(_rawDataSubscribers, newArray, _subscriberCount);
+            newArray[_subscriberCount] = handler;
+            _rawDataSubscribers = newArray;
+            _subscriberCount++;
+        }
+        finally
+        {
+            _subscriberLock.ExitWriteLock();
+        }
+        
+        return new Subscription(() => UnsubscribeRawData(handler));
+    }
+    
+    private void UnsubscribeRawData(Action<SerialMessage> handler)
+    {
+        _subscriberLock.EnterWriteLock();
+        try
+        {
+            var index = Array.IndexOf(_rawDataSubscribers, handler);
+            if (index < 0) return;
+            
+            var newArray = new Action<SerialMessage>[_subscriberCount - 1];
+            Array.Copy(_rawDataSubscribers, 0, newArray, 0, index);
+            Array.Copy(_rawDataSubscribers, index + 1, newArray, index, _subscriberCount - index - 1);
+            _rawDataSubscribers = newArray;
+            _subscriberCount--;
+        }
+        finally
+        {
+            _subscriberLock.ExitWriteLock();
+        }
+    }
 
     /// <summary>
     /// Update port config from connection setting
@@ -77,7 +106,6 @@ public class SerialPortAdapter : ISerialPort
     /// <summary>
     /// Open serial port
     /// </summary>
-    /// <returns>true if successfully opened</returns>
     public bool Open()
     {
         if (IsConnected) return false;
@@ -85,9 +113,8 @@ public class SerialPortAdapter : ISerialPort
         try
         {
             _port.Open();
-            
-            // Clear Buffer before read data
             _port.DiscardInBuffer();
+            _port.DiscardOutBuffer();
             
             _serialToken = new CancellationTokenSource();
             Task.Run(async () => await StartReading(_serialToken.Token));
@@ -103,25 +130,21 @@ public class SerialPortAdapter : ISerialPort
     }
 
     /// <summary>
-    /// Cloase serial port
+    /// Close serial port
     /// </summary>
-    /// <returns>true if successfully closed</returns>
     public bool Close()
     {
         if(!IsConnected) return false;
         
-        _serialToken.Cancel();
+        _serialToken?.Cancel();
         _port.Close();
         
         return true;
     }
-
     
     /// <summary>
-    /// Writes serial data asynchronously. 
+    /// Write serial data asynchronously
     /// </summary>
-    /// <param name="data"><see cref="byte"/>[] - serial data</param>
-    /// <returns>true if successfully write</returns>
     public async Task<bool> WriteAsync(byte[] data)
     {
         if (!IsConnected) return false;
@@ -140,9 +163,8 @@ public class SerialPortAdapter : ISerialPort
     }
 
     /// <summary>
-    /// Manually read serial data using async. The read serial data is updated on the channel.
+    /// Read serial data and broadcast to all subscribers
     /// </summary>
-    /// <param name="token">Token to stop loop</param>
     public async Task StartReading(CancellationToken token)
     {
         try
@@ -157,18 +179,16 @@ public class SerialPortAdapter : ISerialPort
                     byte[] buffer = new byte[bufferSize];
                     await _port.BaseStream.ReadExactlyAsync(buffer, 0, bufferSize, token);
 
-                    switch (_runtimeConfig.ReadMode)
+                    var message = new SerialMessage()
                     {
-                        case ReadModeType.NewLine:
-                            await ProcessDataNewLine(buffer, token);
-                            break;
-                        case ReadModeType.StxEtx:
-                            await ProcessDataStxEtx(buffer, token);
-                            break;
-                        case ReadModeType.Custom:
-                            await ProcessDataStxEtx(buffer, token, _runtimeConfig.CustomStx, _runtimeConfig.CustomEtx);
-                            break;
-                    }
+                        Data = buffer,
+                        DataSize = bufferSize,
+                        Timestamp = DateTime.Now,
+                        Type = MessageType.Received
+                    };
+
+                    // Broadcast raw data to all subscribers
+                    BroadcastRawData(message);
                 }
             }
         }
@@ -182,98 +202,28 @@ public class SerialPortAdapter : ISerialPort
             _systemLogger.LogSystemError(e);
         }
     }
-
-    
-        /// <summary>
-    /// Function to process buffer at each newline 
-    /// </summary>
-    /// <param name="buffer"><see cref="byte"/>[] Buffer data</param>
-    /// <param name="token"><see cref="CancellationToken"/> When serial canceled, cancel it</param>
-    private async Task ProcessDataNewLine(byte[] buffer, CancellationToken token)
-    {
-        // 읽은 데이터를 처리합니다
-        foreach (var currentByte in buffer)
-        {
-            // 줄바꿈 여부 확인
-            if (currentByte == SerialConstants.ControlCharacters.NEWLINE)
-            {
-                if (_bufferList.Count > 0 && _bufferList[^1] == SerialConstants.ControlCharacters.CARRIAGE_RETURN)
-                {
-                    _bufferList.RemoveAt(_bufferList.Count - 1);
-                }
-
-                byte[] lineBytes = GetBufferFromList();
-                            
-                // 채널에 메시지 쓰기
-                await _msgChannel.Writer.WriteAsync(new SerialMessage
-                {
-                    Data = lineBytes,
-                    DataSize = lineBytes.Length,
-                    Timestamp = DateTime.Now,
-                    Type = MessageType.Received
-                }, token);
-            }
-            else
-            {
-                _bufferList.Add(currentByte);
-            }
-        }
-    }
-
-
-    /// <summary>
-    /// Function to process buffer at each [STX ... ETX]
-    /// </summary>
-    /// <param name="buffer"><see cref="byte"/>[] Buffer data</param>
-    /// <param name="token"><see cref="CancellationToken"/> When serial canceled, cancel it</param>
-    /// <param name="stx">(<see cref="byte"/>)If need customize STX</param>
-    /// <param name="etx">(<see cref="byte"/>)If need customize ETX</param>
-    private async Task ProcessDataStxEtx(byte[] buffer, CancellationToken token, byte stx = 0x02, byte etx = 0x03)
-    {
-        foreach (var currentByte in buffer)
-        {
-            // Buffer contain STX and ETX.
-            if (currentByte == stx)
-            {
-                _canBufferAdd = true;
-            }
-            else if(currentByte == etx && _bufferList.Count >= _runtimeConfig.PacketSize - 1)
-            {
-                _canBufferAdd = false;
-                _bufferList.Add(currentByte);
-                
-                byte[] data = GetBufferFromList();
-                
-                // Write message on channel
-                await _msgChannel.Writer.WriteAsync(new SerialMessage
-                {
-                    Data = data,
-                    DataSize = data.Length,
-                    Timestamp = DateTime.Now,
-                    Type = MessageType.Received
-                }, token);
-            }
-
-            // Buffer adding
-            if (_canBufferAdd)
-            {
-                _bufferList.Add(currentByte);
-            }
-        }
-    }
-    
     
     /// <summary>
-    /// Return <see cref="byte"/>[] from <see cref="List{Byte}"/> and Clear List
+    /// Broadcast raw data to all subscribers with zero-copy optimization
     /// </summary>
-    /// <returns><see cref="byte"/>[]</returns>
-    private byte[] GetBufferFromList()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void BroadcastRawData(SerialMessage message)
     {
-        byte[] bytes = new byte[_bufferList.Count];
-        CollectionsMarshal.AsSpan(_bufferList).CopyTo(bytes);
-                
-        _bufferList.Clear();
-
-        return bytes;
+        _subscriberLock.EnterReadLock();
+        try
+        {
+            var count = _subscriberCount;
+            var subscribers = _rawDataSubscribers;
+            
+            // 각 구독자에게 독립적인 복사본 전달
+            for (int i = 0; i < count; i++)
+            {
+                subscribers[i](message);
+            }
+        }
+        finally
+        {
+            _subscriberLock.ExitReadLock();
+        }
     }
 }
