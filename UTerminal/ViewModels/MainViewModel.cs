@@ -430,9 +430,9 @@ public class MainViewModel : ViewModelBase
     /// </summary>
     private void OpenPresetMode()
     {
-        var customParseView = new CustomParseView
+        var customParseView = new PresetModeView
         {
-            DataContext = new CustomParserViewModel(_serialPortAdapter)
+            DataContext = new PresetModeViewModel(_serialPortAdapter)
         };
         
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)

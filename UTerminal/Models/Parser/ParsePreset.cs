@@ -2,13 +2,14 @@ using System;
 using System.Collections.ObjectModel;
 using System.Reactive;
 using ReactiveUI;
+using UTerminal.Models.Parser.Interfaces;
 
 namespace UTerminal.Models.Parser;
 
 /// <summary>
 /// 파싱 포맷 프리셋 (여러 ParseData의 묶음)
 /// </summary>
-public sealed class ParseFormatPreset : ReactiveObject
+public sealed class ParsePreset : ReactiveObject, IParsePreset
 {
     private string _name = "새 포맷";
     private string _description = "";
@@ -45,12 +46,12 @@ public sealed class ParseFormatPreset : ReactiveObject
     /// <summary>
     /// 파싱 포맷 데이터 리스트
     /// </summary>
-    public ObservableCollection<ParseData> ParseFormat { get; set; } = new();
+    public ObservableCollection<IParseData> ParseDataList { get; set; } = [];
 
     /// <summary>
     /// 생성 시간
     /// </summary>
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; } = DateTime.Now;
     
     
     # region Commands
@@ -69,10 +70,10 @@ public sealed class ParseFormatPreset : ReactiveObject
     /// </summary>
     private void MoveItemUp(ParseData item)
     {
-        int index = ParseFormat.IndexOf(item);
+        int index = ParseDataList.IndexOf(item);
         if (index > 0)
         {
-            ParseFormat.Move(index, index - 1);
+            ParseDataList.Move(index, index - 1);
         }
     }
     
@@ -81,10 +82,10 @@ public sealed class ParseFormatPreset : ReactiveObject
     /// </summary>
     private void MoveItemDown(ParseData item)
     {
-        int index = ParseFormat.IndexOf(item);
-        if (index < ParseFormat.Count - 1)
+        int index = ParseDataList.IndexOf(item);
+        if (index < ParseDataList.Count - 1)
         {
-            ParseFormat.Move(index, index + 1);
+            ParseDataList.Move(index, index + 1);
         }
     }
     
@@ -93,13 +94,13 @@ public sealed class ParseFormatPreset : ReactiveObject
     /// </summary>
     private void RemoveItem(ParseData item)
     {
-        ParseFormat.Remove(item);
+        ParseDataList.Remove(item);
         InvalidateCache();
     }
 
     #endregion
     
-    public ParseFormatPreset()
+    public ParsePreset()
     {
         MoveUpCommand = ReactiveCommand.Create<ParseData>(MoveItemUp);
         MoveDownCommand = ReactiveCommand.Create<ParseData>(MoveItemDown);
@@ -125,7 +126,7 @@ public sealed class ParseFormatPreset : ReactiveObject
 
         // LINQ 제거하고 foreach 사용
         int total = 0;
-        foreach (var p in ParseFormat)
+        foreach (var p in ParseDataList)
         {
             total += p.Size;  // ✅ Size 프로퍼티 사용
         }
@@ -137,17 +138,17 @@ public sealed class ParseFormatPreset : ReactiveObject
     /// <summary>
     /// 프리셋 복제
     /// </summary>
-    public ParseFormatPreset Clone()
+    public ParsePreset Clone()
     {
-        var clone = new ParseFormatPreset
+        var clone = new ParsePreset
         {
             Name = $"{Name} (복사본)",
             Description = Description,
         };
 
-        foreach (var parseData in ParseFormat)
+        foreach (var parseData in ParseDataList)
         {
-            clone.ParseFormat.Add(new ParseData(clone, parseData.ParseDataType, parseData.Name, parseData.Length));
+            clone.ParseDataList.Add(new ParseData(clone, parseData.ParseDataType, parseData.Name, parseData.Length));
         }
 
         return clone;

@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using ReactiveUI;
 using UTerminal.Models.Formatters;
 using UTerminal.Models.Messages.Interfaces;
+using UTerminal.Models.Parser.Interfaces;
 using UTerminal.Models.Serial;
 
 namespace UTerminal.Models.Parser;
@@ -12,7 +13,7 @@ namespace UTerminal.Models.Parser;
 /// <summary>
 /// 커스텀 시리얼 데이터 파서
 /// </summary>
-public sealed class CustomSerialParser : ReactiveObject
+public sealed class SerialPresetParser : ReactiveObject, ISerialPresetParser
 {
     private readonly MessageFormatter _formatter = new();
     
@@ -20,7 +21,7 @@ public sealed class CustomSerialParser : ReactiveObject
     private bool _isValid;
     private int _cachedTotalLength = -1;
 
-    public ObservableCollection<ParseFormatPreset> ParseFormatPresets { get; set; } = [];
+    public ObservableCollection<IParsePreset> ParsePresetList { get; set; } = [];
 
     /// <summary>
     /// 마지막 파싱 시간
@@ -51,7 +52,7 @@ public sealed class CustomSerialParser : ReactiveObject
 
         // LINQ 제거
         int total = 0;
-        foreach (var preset in ParseFormatPresets)
+        foreach (var preset in ParsePresetList)
         {
             total += preset.GetTotalLength();
         }
@@ -72,9 +73,9 @@ public sealed class CustomSerialParser : ReactiveObject
         bool anySuccess = false;
         var dataLength = message.Data.Length;
     
-        foreach (var preset in ParseFormatPresets)
+        foreach (var preset in ParsePresetList)
         {
-            if(preset.ParseFormat.Count == 0) continue;
+            if(preset.ParseDataList.Count == 0) continue;
             
             // 길이 체크를 먼저해서 불필요한 파싱 회피
             if (dataLength < preset.GetTotalLength())
@@ -94,13 +95,13 @@ public sealed class CustomSerialParser : ReactiveObject
         return anySuccess;
     }
     
-    private bool ParsePreset(ParseFormatPreset preset, byte[] data)
+    private bool ParsePreset(IParsePreset preset, byte[] data)
     {
         try
         {
             int offset = 0;
         
-            foreach (var parseData in preset.ParseFormat)
+            foreach (var parseData in preset.ParseDataList)
             {
                 if (offset + parseData.Size > data.Length) return false;
 

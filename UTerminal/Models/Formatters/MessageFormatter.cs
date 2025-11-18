@@ -59,9 +59,9 @@ public class MessageFormatter
         };
     }
 
-    public string FormatData(byte[] data, EncodingBytes foramt)
+    public string FormatData(byte[] data, EncodingBytes format)
     {
-        return FormatData(data.AsSpan(), foramt);
+        return FormatData(data.AsSpan(), format);
     }
 
     private static string StringFromBufferOptimized(ReadOnlySpan<byte> data, Encoding encoding)

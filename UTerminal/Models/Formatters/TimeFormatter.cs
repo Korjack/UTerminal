@@ -7,8 +7,6 @@ namespace UTerminal.Models.Formatters;
 /// </summary>
 public static class TimeFormatter
 {
-    private static readonly char[] TimeFormatBuffer = new char[14]; // [HH:mm:ss.fff]
-
     /// <summary>
     /// Formats a DateTime into a char buffer in the format [HH:mm:ss.fff]
     /// </summary>

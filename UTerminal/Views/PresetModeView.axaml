@@ -4,10 +4,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:UTerminal.ViewModels"
         xmlns:converter="clr-namespace:UTerminal.Converter"
+        xmlns:parser="clr-namespace:UTerminal.Models.Parser"
         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="800"
-        x:Class="UTerminal.Views.CustomParseView"
-        x:DataType="vm:CustomParserViewModel"
-        Title="CustomParseView"
+        x:Class="UTerminal.Views.PresetModeView"
+        x:DataType="vm:PresetModeViewModel"
+        Title="Preset Mode"
         Width="1000"
         Height="800">
     <Window.Resources>
@@ -62,7 +63,7 @@
                     <Run Text="{Binding IsConnected, Converter={StaticResource BoolToStatusConverter}}"
                          Foreground="{Binding IsConnected, Converter={StaticResource BoolToColorConverter}}"/>
                     <Run Text=" | "/>
-                    <Run Text="{Binding Parser.LastParseTime, StringFormat='Last: {0:HH:mm:ss.fff}'}"/>
+                    <Run Text="{Binding PresetParser.LastParseTime, StringFormat='Last: {0:HH:mm:ss.fff}'}"/>
                 </TextBlock>
             </Grid>
         </Border>
@@ -135,8 +136,8 @@
                         <!-- 필드 목록 -->
                         <TextBlock Grid.Row="0"
                                    Text="Parse Format" 
-                                   FontWeight="Bold" 
-                                   FontSize="16" 
+                                   FontWeight="Bold"
+                                   FontSize="16"
                                    Margin="0,0,0,5"/>
                         
                         <Border Grid.Row="1" 
@@ -144,9 +145,9 @@
                                 BorderThickness="1" 
                                 Margin="0,0,0,10">
                             <ScrollViewer>
-                                <ItemsControl ItemsSource="{Binding CurrentPreset.ParseFormat}">
+                                <ItemsControl ItemsSource="{Binding CurrentPreset.ParseDataList}">
                                     <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
+                                        <DataTemplate DataType="{x:Type parser:ParseData}">
                                             <Border BorderBrush="LightGray"
                                                     BorderThickness="0,0,0,1"
                                                     Padding="5">
@@ -271,7 +272,7 @@
                                         <ScrollViewer Grid.Column="1"
                                                       HorizontalScrollBarVisibility="Auto"
                                                       VerticalScrollBarVisibility="Disabled">
-                                            <ItemsControl ItemsSource="{Binding ParseFormat}"
+                                            <ItemsControl ItemsSource="{Binding ParseDataList}"
                                                           FlowDirection="LeftToRight"
                                                           Padding="0, 0, 0, 10">
                                                 <ItemsControl.ItemsPanel>
@@ -307,7 +308,7 @@
                                         
                                         <Button Grid.Column="2"
                                                 Margin="15, 0, 0, 0"
-                                                Command="{Binding $parent[Window].((vm:CustomParserViewModel)DataContext).RemovePresetCommand}" 
+                                                Command="{Binding $parent[Window].((vm:PresetModeViewModel)DataContext).RemovePresetCommand}" 
                                                 Content="X"
                                                 Foreground="White"
                                                 Background="Red"/>

@@ -12,6 +12,7 @@ using ReactiveUI;
 using UTerminal.Models.Messages;
 using UTerminal.Models.Messages.Types;
 using UTerminal.Models.Parser;
+using UTerminal.Models.Parser.Interfaces;
 using UTerminal.Models.Serial.Interfaces;
 
 namespace UTerminal.ViewModels;
@@ -19,7 +20,7 @@ namespace UTerminal.ViewModels;
 /// <summary>
 /// 파서 설정 창 ViewModel
 /// </summary>
-public class CustomParserViewModel : ReactiveObject
+public class PresetModeViewModel : ReactiveObject
 {
     public Interaction<Unit, IReadOnlyList<IStorageFile>> ShowFilePickerInteraction { get; } = new();
     
@@ -29,7 +30,7 @@ public class CustomParserViewModel : ReactiveObject
     private IDisposable? _rawDataSubscription;
 
     // Field 추가용 프로퍼티
-    private ParseFormatPreset? _currentPreset;
+    private ParsePreset? _currentPreset;
     private ParseDataType _selectedType;
     private ObservableCollection<ParseDataType> _availableTypes;
     private bool _isVariableField;
@@ -43,13 +44,13 @@ public class CustomParserViewModel : ReactiveObject
     private int _successParseCount;
     private int _failedParseCount;
 
-    private ObservableCollection<ParseFormatPreset> _filteredPreset;
+    private ObservableCollection<IParsePreset> _filteredPreset;
 
     #endregion
 
     #region public
 
-    public CustomSerialParser Parser { get; }
+    public SerialPresetParser PresetParser { get; }
 
     public ObservableCollection<ParseDataType> AvailableTypes
     {
@@ -57,7 +58,7 @@ public class CustomParserViewModel : ReactiveObject
         set => this.RaiseAndSetIfChanged(ref _availableTypes, value);
     }
 
-    public ParseFormatPreset? CurrentPreset
+    public ParsePreset? CurrentPreset
     {
         get => _currentPreset;
         set => this.RaiseAndSetIfChanged(ref _currentPreset, value);
@@ -137,7 +138,7 @@ public class CustomParserViewModel : ReactiveObject
         set => this.RaiseAndSetIfChanged(ref _searchPresetName, value);
     }
 
-    public ObservableCollection<ParseFormatPreset> FilteredPreset
+    public ObservableCollection<IParsePreset> FilteredPreset
     {
         get => _filteredPreset;
         set => this.RaiseAndSetIfChanged(ref _filteredPreset, value);
@@ -150,12 +151,12 @@ public class CustomParserViewModel : ReactiveObject
     /// 초기화
     /// </summary>
     /// <param name="serialPort">사용중인 시리얼 서비스</param>
-    public CustomParserViewModel(ISerialPort serialPort)
+    public PresetModeViewModel(ISerialPort serialPort)
     {
         _serialPort = serialPort;
 
         // Parser 초기화
-        Parser = new CustomSerialParser();
+        PresetParser = new SerialPresetParser();
 
         // 사용 가능한 타입 목록
         AvailableTypes = new ObservableCollection<ParseDataType>(
@@ -209,15 +210,15 @@ public class CustomParserViewModel : ReactiveObject
     /// </summary>
     private void AddNewPreset()
     {
-        var newPreset = new ParseFormatPreset();
-        Parser.ParseFormatPresets.Add(newPreset);
+        var newPreset = new ParsePreset();
+        PresetParser.ParsePresetList.Add(newPreset);
         CurrentPreset = newPreset;
     }
 
     private void RemovePreset()
     {
         if(CurrentPreset == null) return;
-        Parser.ParseFormatPresets.Remove(CurrentPreset);
+        PresetParser.ParsePresetList.Remove(CurrentPreset);
     }
 
     /// <summary>
@@ -228,12 +229,12 @@ public class CustomParserViewModel : ReactiveObject
         if (CurrentPreset == null) return;
         
         var newField = new ParseData(CurrentPreset, SelectedType, FieldName, FieldLength);
-        CurrentPreset?.ParseFormat.Add(newField);
+        CurrentPreset?.ParseDataList.Add(newField);
         
         if (IsVariableField)
         {
             var variableField = new ParseData(CurrentPreset!, ParseDataType.Byte, FieldName,  length: 0, linkData: newField);
-            CurrentPreset?.ParseFormat.Add(variableField);
+            CurrentPreset?.ParseDataList.Add(variableField);
         }
 
         // 입력 필드 초기화
@@ -249,7 +250,7 @@ public class CustomParserViewModel : ReactiveObject
     {
         if(CurrentPreset is null) return;
         
-        CurrentPreset.ParseFormat.Clear();
+        CurrentPreset.ParseDataList.Clear();
         ResetStatistics();
     }
 
@@ -258,7 +259,7 @@ public class CustomParserViewModel : ReactiveObject
     /// </summary>
     private void StartParsing()
     {
-        if (Parser.ParseFormatPresets.Count == 0)
+        if (PresetParser.ParsePresetList.Count == 0)
         {
             // TODO: 필드가 없으면 경고 표시
             return;
@@ -324,11 +325,11 @@ public class CustomParserViewModel : ReactiveObject
             foreach (var file in files)
             {
                 var jsonString = await file.OpenReadAsync();
-                var preset = await JsonSerializer.DeserializeAsync<ParseFormatPreset>(jsonString);
+                var preset = await JsonSerializer.DeserializeAsync<ParsePreset>(jsonString);
                 
                 if(preset == null) continue;
                 
-                Parser.ParseFormatPresets.Add(preset);
+                PresetParser.ParsePresetList.Add(preset);
             }
         }
     }
@@ -341,7 +342,7 @@ public class CustomParserViewModel : ReactiveObject
     {
         TotalReceivedCount++;
     
-        var success = Parser.ParseMessage(message);
+        var success = PresetParser.ParseMessage(message);
     
         if (success)
         {
@@ -357,13 +358,13 @@ public class CustomParserViewModel : ReactiveObject
     {
         if (string.IsNullOrWhiteSpace(searchText))
         {
-            FilteredPreset = Parser.ParseFormatPresets;
+            FilteredPreset = PresetParser.ParsePresetList;
         }
         else
         {
-            var filtered = Parser.ParseFormatPresets.Where(x => 
+            var filtered = PresetParser.ParsePresetList.Where(x => 
                 x.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase));
-            FilteredPreset = new ObservableCollection<ParseFormatPreset>(filtered);
+            FilteredPreset = new ObservableCollection<IParsePreset>(filtered);
         }
     }
 }
