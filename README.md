@@ -124,18 +124,40 @@ UTerminal을 통해 사용자는 ASCII, HEX, UTF-8 등의 인코딩 타입을 �
 **Note:** 
 현재 arm64의 경우에는 빌드는 가능하나 테스트가 되지 않아 실행여부 확인이 어렵습니다.
 
-#### Windows
+### Windows
 ```shell
 dotnet publish -c Release -r win-x64
 ```
 
-#### MacOS
+### MacOS
+
+##### build
 ```shell
 # If it is the M series, you can publish it as osx-arm64(not tested)
 dotnet publish -c Release -r osx-x64
 ```
 
-#### Linux
+##### App Path Config
+```text
+UTerminal.Desktop.app
+└── Contents
+    ├── Info.plist
+    ├── MacOS
+    │   ├── libAvaloniaNative.dylib
+    │   ├── libHarfBuzzSharp.dylib
+    │   ├── libSkiaSharp.dylib
+    │   └── UTerminal.Desktop
+    └── Resources
+        └── Applogo.icns
+```
+
+##### Signing
+```shell
+# Self-Signing
+codesign --force --deep --sign "Certificate" App.app
+```
+
+### Linux
 ```shell
 # If use arm, you can publish it as linux-arm(not tested)
 dotnet publish -c Release -r linux-x64

@@ -5,9 +5,9 @@
         <LangVersion>latest</LangVersion>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 
-        <Version>0.1.0</Version>
-        <AssemblyVersion>0.1.0.2</AssemblyVersion>
-        <FileVersion>0.1.0.2</FileVersion>
+        <Version>0.2.0</Version>
+        <AssemblyVersion>0.2.0</AssemblyVersion>
+        <FileVersion>0.2.0.</FileVersion>
     </PropertyGroup>
 
     <ItemGroup>
