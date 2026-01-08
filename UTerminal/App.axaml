@@ -19,5 +19,6 @@
     <Application.Styles>
         <FluentTheme />
         <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
+        <StyleInclude Source="Views/Components/TitledBorderPanel.axaml"/>
     </Application.Styles>
 </Application>

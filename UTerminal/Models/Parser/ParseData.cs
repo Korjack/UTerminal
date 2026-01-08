@@ -1,11 +1,12 @@
 using ReactiveUI;
+using UTerminal.Models.Parser.Interfaces;
 
 namespace UTerminal.Models.Parser;
 
 /// <summary>
 /// 파싱 데이터 클래스 (UI 바인딩 지원)
 /// </summary>
-public sealed class ParseData : ReactiveObject
+public sealed class ParseData : ReactiveObject, IParseData
 {
     private object? _parsedValue;
     private string _displayValue = "";
@@ -16,8 +17,8 @@ public sealed class ParseData : ReactiveObject
     public int Size { get; }
     public int Length { get; }
 
-    public ParseData? LinkData { get; }
-    public ParseFormatPreset Parent { get; }
+    public IParseData? LinkData { get; }
+    public ParsePreset Parent { get; }
 
     public string Name
     {
@@ -50,7 +51,7 @@ public sealed class ParseData : ReactiveObject
         private set => this.RaiseAndSetIfChanged(ref _displayValue, value);
     }
 
-    public ParseData(ParseFormatPreset preset, ParseDataType parseDataType, string name = "", int length = 1, ParseData? linkData = null)
+    public ParseData(ParsePreset preset, ParseDataType parseDataType, string name = "", int length = 1, ParseData? linkData = null)
     {
         Parent = preset;
         ParseDataType = parseDataType;

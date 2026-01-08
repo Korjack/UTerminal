@@ -12,9 +12,9 @@ using UTerminal.ViewModels;
 
 namespace UTerminal.Views;
 
-public partial class CustomParseView : ReactiveWindow<CustomParserViewModel>
+public partial class PresetModeView : ReactiveWindow<PresetModeViewModel>
 {
-    public CustomParseView()
+    public PresetModeView()
     {
         InitializeComponent();
         

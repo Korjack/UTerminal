@@ -1,0 +1,223 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:UTerminal.ViewModels"
+             xmlns:cv="clr-namespace:UTerminal.Converter"
+             xmlns:local="clr-namespace:UTerminal.Views.Components"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="UTerminal.Views.Components.SerialRuntimePanel"
+             x:DataType="vm:MainViewModel">
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+    <UserControl.Styles>
+        <StyleInclude Source="avares://UTerminal/Styles/SerialSettingRadioButton.axaml" />
+        <StyleInclude Source="avares://UTerminal/Styles/CheckboxDefaultStyle.axaml" />
+    </UserControl.Styles>
+    <UserControl.Resources>
+        <cv:ByteToHexStringConverter x:Key="ByteToHexStringConverter" />
+        <cv:NumberToBaudrateConverter x:Key="NumberToBaudrateConverter" />
+        <cv:BooleanOrConverter x:Key="BooleanOrConverter" />
+    </UserControl.Resources>
+    
+    <StackPanel Margin="0, 0, 0, 5" Spacing="10"
+                Orientation="Horizontal">
+        
+        <StackPanel.Styles>
+            <Style Selector="local|TitledBorderPanel">
+                <Setter Property="BorderBrush" Value="Gray"/>
+                <Setter Property="BorderThickness" Value="2"/>
+                <Setter Property="Padding" Value="5"/>
+            </Style>
+        </StackPanel.Styles>
+
+        <!-- 인코딩 타입 선택 -->
+        <local:TitledBorderPanel Title="Encoding"
+                                 BorderBrush="Gray"
+                                 BorderThickness="2"
+                                 Padding="5">
+            <StackPanel Margin="0, 5, 0, 0">
+                <RadioButton Content="ASCII"
+                             GroupName="EncodingBytesGroup"
+                             IsChecked="True">
+                    <Interaction.Behaviors>
+                        <EventTriggerBehavior EventName="Click">
+                            <InvokeCommandAction Command="{Binding EncodingBytesChangedCommand}"
+                                                 CommandParameter="ASCII" />
+                        </EventTriggerBehavior>
+                    </Interaction.Behaviors>
+                </RadioButton>
+                <RadioButton Content="HEX"
+                             GroupName="EncodingBytesGroup">
+                    <Interaction.Behaviors>
+                        <EventTriggerBehavior EventName="Click">
+                            <InvokeCommandAction Command="{Binding EncodingBytesChangedCommand}"
+                                                 CommandParameter="HEX" />
+                        </EventTriggerBehavior>
+                    </Interaction.Behaviors>
+                </RadioButton>
+                <RadioButton Content="UTF-8"
+                             GroupName="EncodingBytesGroup">
+                    <Interaction.Behaviors>
+                        <EventTriggerBehavior EventName="Click">
+                            <InvokeCommandAction Command="{Binding EncodingBytesChangedCommand}"
+                                                 CommandParameter="UTF8" />
+                        </EventTriggerBehavior>
+                    </Interaction.Behaviors>
+                </RadioButton>
+            </StackPanel>
+        </local:TitledBorderPanel>
+        <!-- 인코딩 타입 선택 -->
+
+        <!-- 버퍼 읽기모드 선택 -->
+        <local:TitledBorderPanel Title="ReadType">
+            <StackPanel Margin="0, 5, 0, 0">
+                <RadioButton Content="CR+LF"
+                             GroupName="ReadTypeGroup"
+                             IsChecked="True">
+                    <Interaction.Behaviors>
+                        <EventTriggerBehavior EventName="Click">
+                            <InvokeCommandAction Command="{Binding ReadTypeChangedCommand}"
+                                                 CommandParameter="NewLine" />
+                        </EventTriggerBehavior>
+                    </Interaction.Behaviors>
+                </RadioButton>
+                <RadioButton x:Name="StxEtx" Content="STX-ETX"
+                             GroupName="ReadTypeGroup">
+                    <Interaction.Behaviors>
+                        <EventTriggerBehavior EventName="Click">
+                            <InvokeCommandAction Command="{Binding ReadTypeChangedCommand}"
+                                                 CommandParameter="STX_ETX" />
+                        </EventTriggerBehavior>
+                    </Interaction.Behaviors>
+                </RadioButton>
+                <RadioButton x:Name="CustomStxEtx" Content="Custom STX-ETX"
+                             GroupName="ReadTypeGroup">
+                    <Interaction.Behaviors>
+                        <EventTriggerBehavior EventName="Click">
+                            <InvokeCommandAction Command="{Binding ReadTypeChangedCommand}"
+                                                 CommandParameter="Custom" />
+                        </EventTriggerBehavior>
+                    </Interaction.Behaviors>
+                </RadioButton>
+            </StackPanel>
+        </local:TitledBorderPanel>
+        <!-- 버퍼 읽기모드 선택 -->
+
+        <!-- 패킷 크기 설정 -->
+        <local:TitledBorderPanel Title="Packet Size">
+            <local:TitledBorderPanel.IsEnabled>
+                <MultiBinding Converter="{StaticResource BooleanOrConverter}">
+                    <MultiBinding.Bindings>
+                        <Binding Path="#StxEtx.IsChecked" />
+                        <Binding Path="#CustomStxEtx.IsChecked" />
+                    </MultiBinding.Bindings>
+                </MultiBinding>
+            </local:TitledBorderPanel.IsEnabled>
+            <NumericUpDown VerticalAlignment="Center"
+                           ShowButtonSpinner="False"
+                           FormatString="0"
+                           Text="{Binding RuntimeConfig.PacketSizeText, UpdateSourceTrigger=LostFocus}"
+                           HorizontalContentAlignment="Center" />
+        </local:TitledBorderPanel>
+        <!-- 패킷 크기 설정 -->
+
+        <!-- 커스텀 STX ETX -->
+        <local:TitledBorderPanel IsEnabled="{Binding #CustomStxEtx.IsChecked}"
+                                 Title="Custom STX-ETX">
+            <StackPanel Orientation="Horizontal" Spacing="5" Margin="0, 8, 0, 0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="STX"
+                               HorizontalAlignment="Center" />
+                    <TextBox VerticalContentAlignment="Center"
+                             HorizontalContentAlignment="Center"
+                             MaxLength="2"
+                             Text="{Binding RuntimeConfig.CustomStx, Converter={StaticResource ByteToHexStringConverter}}"
+                             KeyDown="CustomStxEtx_OnKeyDown" />
+                </DockPanel>
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="ETX"
+                               HorizontalAlignment="Center" />
+                    <TextBox VerticalContentAlignment="Center"
+                             HorizontalContentAlignment="Center"
+                             MaxLength="2"
+                             Text="{Binding RuntimeConfig.CustomEtx, Converter={StaticResource ByteToHexStringConverter}}"
+                             KeyDown="CustomStxEtx_OnKeyDown" />
+                </DockPanel>
+            </StackPanel>
+        </local:TitledBorderPanel>
+        <!-- 커스텀 STX ETX -->
+
+        <!-- Custom ComPort -->
+        <local:TitledBorderPanel IsEnabled="{Binding !IsConnected}"
+                                 Title="Custom ComPort">
+            <StackPanel Spacing="5" Margin="0, 8, 0, 0">
+                    <RadioButton x:Name="CustomPortPathRadioButton"
+                                 Content="Custom ComPort"
+                                 GroupName="COMPortGroup">
+                    </RadioButton>
+                    <TextBox x:Name="CustomPortPathTextBox"
+                             IsEnabled="{Binding #CustomPortPathRadioButton.IsChecked}"
+                             Watermark="Write port path">
+                        <Interaction.Behaviors>
+                            <EventTriggerBehavior EventName="LostFocus">
+                                <InvokeCommandAction
+                                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ComPortRadioChangedCommand}"
+                                    CommandParameter="{Binding #CustomPortPathTextBox.Text}" />
+                            </EventTriggerBehavior>
+                        </Interaction.Behaviors>
+                    </TextBox>
+                </StackPanel>
+        </local:TitledBorderPanel>
+        <!-- Custom ComPort -->
+
+        <!-- Custom Baudrate -->
+        <local:TitledBorderPanel IsEnabled="{Binding !IsConnected}"
+                                 Title="Custom Baudrate">
+            <StackPanel Spacing="5" Margin="0, 8, 0, 0">
+                <RadioButton x:Name="CustomBaudrateButton"
+                             Content="Custom Baudrate"
+                             GroupName="BaudRateGroup">
+                </RadioButton>
+                <NumericUpDown
+                    Value="{Binding ConnectionConfig.BaudRate, Converter={StaticResource NumberToBaudrateConverter}}"
+                    IsEnabled="{Binding #CustomBaudrateButton.IsChecked}"
+                    FormatString="0"
+                    ShowButtonSpinner="False"
+                    Watermark="Write baudrate as number" />
+            </StackPanel>
+        </local:TitledBorderPanel>
+        <!-- Custom Baudrate -->
+
+        <!-- For logging serial data -->
+        <local:TitledBorderPanel Title="Logging">
+            <StackPanel Margin="0, 8, 0, 0">
+                <Button Content="Start Data Logging"
+                        FontSize="10"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Command="{Binding SerialLoggingCommand}"
+                        CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+                <Button Content="Change Log Path"
+                        IsEnabled="{Binding !IsSerialLogging}"
+                        FontSize="10"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Command="{Binding SetSerialLogPathCommand}" />
+            </StackPanel>
+        </local:TitledBorderPanel>
+        <!-- For logging serial data -->
+        
+        
+        <local:TitledBorderPanel Title="Display Options"
+                                 Padding="10">
+            <CheckBox Content="Visible"
+                      IsChecked="{Binding IsDataDisplayVisible}"/>
+        </local:TitledBorderPanel>
+
+    </StackPanel>
+    
+</UserControl>
