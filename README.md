@@ -16,6 +16,14 @@ UTerminal을 통해 사용자는 ASCII, HEX, UTF-8 등의 인코딩 타입을 �
 
 현 프로그램은 `Terminal` 프로그램을 모방하여 만들었습니다.
 
+## New Features
+- 사용자 정의 프리셋을 통하여, 시리얼 데이터 파싱
+  - 이름 및 각 데이터 타입하단에 데이터정보 업데이트
+  - 인디케이터를 통한 데이터 파싱 성공여부 확인 기능
+  - 사용자 정의 프리셋 구성 가능
+  - 가변길이 패킷 파싱 기능 추가
+  - 프리셋 저장 및 불러오기 기능 추가
+
 ## Features
 - 시리얼 포트 장치와 연결 기능 제공
 - ASCII, HEX, UTF-8 인코딩 타입 제공
@@ -27,26 +35,36 @@ UTerminal을 통해 사용자는 ASCII, HEX, UTF-8 등의 인코딩 타입을 �
 - 로깅 기능으로 프로그램 상태 기록 기능 제공
 - 시리얼 데이터 로깅 기능 제공
 
-## ***TODO*** 목록
+---
 
-- 사용자 정의 패킷 타입 선언으로 시리얼 데이터 파싱기능 추가
+## ***TODO*** 목록
 - 시리얼 데이터를 TCP/UDP를 통해서 전송
+
+---
 
 # Screenshot
 
+### 기본 화면
 ![main.png](Images/main.png "MacOS Running")
 
+### 프리셋 모드 화면
+![preset.png](Images/preset.png "Preset Mode")
 
-## 사용방법
+---
 
-### Receiving Data
-1. 시리얼 포트를 선정하고, 그에 맞는 설정을 고릅니다.
+# 사용방법
+
+### 기본모드
+
+#### 데이터 수신
+1. 먼저 시리얼 포트를 선정하고, 그에 맞는 Baudrate, Parity, Data bits 등을 선택해줍니다.
 2. Connect 버튼을 눌러 시작합니다.
+3. Encoding과 ReadType을 들어오는 데이터에 맞춰서, 화면에 출력이 나오는지 확인합니다.
 
-※ 만약 내가 찾고 있는 포트가 보이지 않으면, Rescan 버튼을 눌러 새로고침 해줍니다.
+※ 만약 내가 찾고 있는 포트가 보이지 않으면, Rescan 버튼을 눌러 새로고침 해줍니다. <br>
 ※ STX/ETX를 사용한다면, 패킷크기를 설정하여, 크기만큼 받아서 모니터링할 수 있습니다.
 
-### Sending Data
+#### 데이터 송신
 1. 화면 하단의 Input에 원하는 데이터를 입력합니다.
 2. Enter키 혹은 Send 버튼을 통해서 데이터를 전송합니다.
 
@@ -60,6 +78,31 @@ UTerminal을 통해 사용자는 ASCII, HEX, UTF-8 등의 인코딩 타입을 �
 ※ 메인화면의 Input과 Macro Window의 Input에서 모두 적용이 됩니다.
 
 
+### 사용자 정의 프리셋 모드
+1. 먼저 시리얼 포트를 연결합니다.
+2. `Preset Mode`를 눌러, 새로운 창으로 진입합니다.
+3. 탭 상단의 `New Preset`을 눌러 새로운 프리셋을 추가합니다.
+    - 하단의 프리셋이 선택되어있어야 필드를 추가할 수 있습니다.
+4. 좌측의 프리셋 탭에서 먼저 필드를 추가해줍니다.
+   1. 필드 이름 설정
+   2. 필드의 데이터 타입 설정
+5. 상단의 `Start`버튼을 통해 파싱을 시작합니다. 
+
+※ 프리셋을 저장하고 불러오기 가능
+
+<br>
+
+#### Variable data (가변길이 데이터 파싱)
+1. `Variable data`를 체크하여 활성화
+2. DataType에서 가변길이의 길이 데이터 크기를 설정
+   - ex) 길이 데이터의 타입이 8바이트라면 Uint8로 설정 
+3. 한쌍의 데이터가 추가 된것을 확인
+
+※ 데이터는 Byte로 그 길이만큼 파싱합니다. <br>
+※ 데이터 길이가 들어오는 순서 변경 가능 <br>
+※ 데이터 길이는 어떤 데이터 필드와 연결되어있는지 이름으로 확인 가능
+
+---
 
 # 빌드
 
@@ -70,6 +113,7 @@ UTerminal을 통해 사용자는 ASCII, HEX, UTF-8 등의 인코딩 타입을 �
 - [AvaloniaEdit](https://github.com/AvaloniaUI/AvaloniaEdit) 11.1.0
 - [Avalonia.Xaml.Behaviors](https://github.com/wieslawsoltes/Avalonia.Xaml.Behaviors) 11.2.0.x
 - [log4net](https://github.com/apache/logging-log4net) 3.0.3
+
 
 ## 배포
 
@@ -96,6 +140,8 @@ dotnet publish -c Release -r osx-x64
 # If use arm, you can publish it as linux-arm(not tested)
 dotnet publish -c Release -r linux-x64
 ```
+
+---
 
 ## 라이센스
 
