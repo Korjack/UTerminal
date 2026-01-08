@@ -4,7 +4,7 @@ using Avalonia.Data.Converters;
 
 namespace UTerminal.Converter;
 
-public class BoolToStringConverter : IValueConverter
+public class BoolToActivatedConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {

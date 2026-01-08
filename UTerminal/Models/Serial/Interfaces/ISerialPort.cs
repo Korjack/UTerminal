@@ -1,7 +1,7 @@
+using System;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
-using UTerminal.Models.Messages.Interfaces;
+using UTerminal.Models.Messages;
 
 namespace UTerminal.Models.Serial.Interfaces;
 
@@ -13,10 +13,11 @@ public interface ISerialPort
     public bool IsConnected { get; }
     
     /// <summary>
-    /// If necessary, you can configure the channel to receive serial data.
+    /// Subscribe to raw data stream
     /// </summary>
-    /// <returns>null</returns>
-    public ChannelReader<ISerialMessage>? GetReadChannel() => null;
+    /// <param name="handler">Handler to receive raw byte data</param>
+    /// <returns>IDisposable to unsubscribe</returns>
+    public IDisposable SubscribeRawData(Action<SerialMessage> handler);
     
     /// <summary>
     /// Serial open

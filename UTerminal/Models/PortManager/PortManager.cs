@@ -95,7 +95,7 @@ public class PortManager : ReactiveObject
 
         // Select port from AvailablePorts
         var newSelection = AvailablePorts.FirstOrDefault(p => p.Name == portName);
-        if (newSelection != null && newSelection.IsEnabled)
+        if (newSelection is { IsEnabled: true })
         {
             newSelection.IsEnabled = true;
             SelectedPort = newSelection;

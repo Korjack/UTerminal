@@ -18,6 +18,7 @@ namespace UTerminal.ViewModels;
 
 public class MainViewModel : ViewModelBase
 {
+    private readonly SerialPortAdapter _serialPortAdapter;
     private readonly SerialService _serialService;                      // Serial Connection Management
     private readonly SerialMsgProcessor _serialMsgProcessor;            // Converts and processes messages of serial message type.
     
@@ -33,7 +34,9 @@ public class MainViewModel : ViewModelBase
     private bool _isConnected;                                              // Serial connection status
     private string _receivedSerialData = string.Empty;                      // Convert to string from serial message
     private bool _isSerialLogging;                                          // Serial data logging status
-    private ObservableAsPropertyHelper<double> _messageRate;                // Message hz
+    private ObservableAsPropertyHelper<double> _messageRate = ObservableAsPropertyHelper<double>.Default();                // Message hz
+
+    private bool _isDataDisplayVisible = true;
 
     #endregion
 
@@ -58,6 +61,12 @@ public class MainViewModel : ViewModelBase
     
     public double MessageRate => _messageRate.Value;
 
+    public bool IsDataDisplayVisible
+    {
+        get => _isDataDisplayVisible;
+        set => this.RaiseAndSetIfChanged(ref _isDataDisplayVisible, value);
+    }
+
     #endregion
     
     public MainViewModel()
@@ -65,7 +74,8 @@ public class MainViewModel : ViewModelBase
         ConnectionConfig = new SerialConnectionConfiguration();
         RuntimeConfig = new SerialRuntimeConfiguration();
         
-        _serialService = new SerialService(ConnectionConfig, RuntimeConfig);
+        _serialPortAdapter = new SerialPortAdapter(ConnectionConfig);
+        _serialService = new SerialService(_serialPortAdapter, ConnectionConfig, RuntimeConfig);
         PortManager = new PortManager(ConnectionConfig);
         
         _serialMsgProcessor = new SerialMsgProcessor(1024);
@@ -155,6 +165,8 @@ public class MainViewModel : ViewModelBase
     public ICommand ConnectCommand { get; set; } = null!;               // Connect Serial
     public ICommand ReScanCommand { get; set; } = null!;                // Scan Port List
 
+    public ICommand DevCommand { get; set; } = null!;                   // For Dev
+
     #endregion
 
     #region Serial Options
@@ -189,6 +201,7 @@ public class MainViewModel : ViewModelBase
         QuitCommand = ReactiveCommand.Create(QuitProgram);
         ConnectCommand = ReactiveCommand.Create(ConnectSerialPort);
         ReScanCommand = ReactiveCommand.Create(PortManager.ScanPort);
+        DevCommand = ReactiveCommand.Create(OpenPresetMode);
 
         // 옵션 설정 커맨드
         ComPortRadioChangedCommand = ReactiveCommand.Create<object>(ComPortRadio_Clicked);
@@ -355,7 +368,7 @@ public class MainViewModel : ViewModelBase
     /// <summary>
     /// ReadType RadioButton changed
     /// </summary>
-    /// <remarks><see cref="ReadMode"/></remarks>
+    /// <remarks><see cref="ReadModeType"/></remarks>
     /// <param name="type"><see cref="string"/></param>
     private void ReadTypeChanged_Clicked(string type)
     {
@@ -408,6 +421,23 @@ public class MainViewModel : ViewModelBase
         else
         {
             _systemLogger.LogInfo($"Serial Message Logging Path not changed > {_msgLogManager.SerialLogFilePath}");
+        }
+    }
+    
+    
+    /// <summary>
+    /// Open Preset Mode Window
+    /// </summary>
+    private void OpenPresetMode()
+    {
+        var customParseView = new PresetModeView
+        {
+            DataContext = new PresetModeViewModel(_serialPortAdapter)
+        };
+        
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
+        {
+            customParseView.Show(desktopLifetime.MainWindow!);
         }
     }
 

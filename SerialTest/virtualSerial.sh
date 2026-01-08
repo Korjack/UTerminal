@@ -1,0 +1,1 @@
+socat -d -d pty,raw,echo=0,link=/tmp/vserial1,nonblock pty,raw,echo=0,link=/tmp/vserial2,nonblock
