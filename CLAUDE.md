@@ -25,6 +25,8 @@ dotnet publish -c Release -r osx-x64
 dotnet publish -c Release -r linux-x64
 ```
 
+Release 배포는 대상 플랫폼과 같은 OS에서 실행한다. `UTerminal.Desktop.csproj`의 플랫폼별 설정(`OutputType=WinExe` 등)은 대상 RID가 아니라 빌드 호스트 OS(`RuntimeInformation.IsOSPlatform`)로 적용 여부가 정해진다. 그래서 Linux/macOS에서 `-r win-x64`로 배포하면 `OutputType=Exe`로 빌드되어 실행 시 콘솔 창이 함께 뜬다.
+
 테스트 프로젝트는 현재 없음. `SerialTest/` 폴더는 Python 기반 수동 테스트 도구(가상 시리얼 포트 시뮬레이터)이며 프로젝트 빌드에 포함되지 않는다.
 
 ## 주요 기술 스택
