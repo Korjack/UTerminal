@@ -18,7 +18,7 @@ dotnet test UTerminal.Tests
 
 ## A. 자동 수정 항목
 
-### - [ ] A0. `SystemLogger`가 Avalonia 앱 밖에서 생성되지 않음
+### - [x] A0. `SystemLogger`가 Avalonia 앱 밖에서 생성되지 않음
 
 - **문제**: `SystemLogPath`가 `App.Current.Name`을 null 검사 없이 읽는다(`UTerminal/Models/Utils/Logger/SystemLogger.cs:17`). Avalonia `Application`이 없으면 `NullReferenceException`이 난다. `SystemLogger.Instance`를 필드에서 초기화하는 `SerialService`, `PortManager` 등을 테스트에서 만들 수 없다.
 - **수정**: `App.Current?.Name ?? "UTerminal"`. 앱 실행 시 `App.Current.Name`은 `"UTerminal"`(`UTerminal/App.axaml:6`)이므로 로그 경로는 같다.

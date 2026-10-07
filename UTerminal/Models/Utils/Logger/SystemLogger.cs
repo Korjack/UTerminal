@@ -14,7 +14,9 @@ public class SystemLogger
     private readonly ILog _log;
 
     public static string LogName => "SystemLog";
-    public string SystemLogPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), App.Current.Name, App.Current.Name + "-system.log");
+    // Avalonia Application이 없는 환경(테스트 등)에서는 App.axaml의 Name과 같은 값을 쓴다
+    private static string AppName => App.Current?.Name ?? "UTerminal";
+    public string SystemLogPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppName, AppName + "-system.log");
 
     private SystemLogger()
     {
