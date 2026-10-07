@@ -15,6 +15,31 @@ public class SerialServiceTests
         return (service, port);
     }
 
+    [Fact(Skip = "A2 수정 전")]
+    public void MsgReceived_PreservesPacketArrivalOrder()
+    {
+        // Arrange
+        const int count = 2000;
+        var (service, port) = Connected();
+        var received = new ConcurrentQueue<string>();
+        using var done = new CountdownEvent(count);
+        service.MsgReceived += (_, msg) =>
+        {
+            received.Enqueue(Encoding.ASCII.GetString(msg.Data));
+            done.Signal();
+        };
+
+        // Act
+        for (var i = 0; i < count; i++)
+        {
+            port.Emit(Encoding.ASCII.GetBytes($"{i}\n"));
+        }
+        Assert.True(done.Wait(TimeSpan.FromSeconds(10)));
+
+        // Assert
+        Assert.Equal(Enumerable.Range(0, count).Select(i => i.ToString()), received);
+    }
+
     [Theory]
     [InlineData("A\r\n", "A")]
     [InlineData("A\n", "A")]
