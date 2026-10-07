@@ -172,24 +172,23 @@ public class SerialPortAdapter : ISerialPort
             _systemLogger.LogInfo("Serial Read Ready.");
             while (!token.IsCancellationRequested)
             {
-                int bufferSize = _port.BytesToRead;
+                // 데이터가 올 때까지 대기한 뒤, 그 시점에 도착해 있는 만큼 읽는다
+                byte[] readBuffer = new byte[Math.Max(_port.ReadBufferSize, 1)];
+                int bufferSize = await _port.BaseStream.ReadAsync(readBuffer, token);
+                if (bufferSize == 0) continue;
 
-                if (bufferSize > 0)
+                byte[] buffer = readBuffer[..bufferSize];
+
+                var message = new SerialMessage()
                 {
-                    byte[] buffer = new byte[bufferSize];
-                    await _port.BaseStream.ReadExactlyAsync(buffer, 0, bufferSize, token);
+                    Data = buffer,
+                    DataSize = bufferSize,
+                    Timestamp = DateTime.Now,
+                    Type = MessageType.Received
+                };
 
-                    var message = new SerialMessage()
-                    {
-                        Data = buffer,
-                        DataSize = bufferSize,
-                        Timestamp = DateTime.Now,
-                        Type = MessageType.Received
-                    };
-
-                    // Broadcast raw data to all subscribers
-                    BroadcastRawData(message);
-                }
+                // Broadcast raw data to all subscribers
+                BroadcastRawData(message);
             }
         }
         catch (OperationCanceledException e)
