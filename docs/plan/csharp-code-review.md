@@ -24,11 +24,11 @@ dotnet test UTerminal.Tests
 - **수정**: `App.Current?.Name ?? "UTerminal"`. 앱 실행 시 `App.Current.Name`은 `"UTerminal"`(`UTerminal/App.axaml:6`)이므로 로그 경로는 같다.
 - **검증**: `SerialServiceTests`, `PortManagerTests`가 생성 단계에서 NRE 없이 실행된다.
 
-### - [ ] A1. 연결 중 수신 루프가 CPU 코어 하나를 계속 사용
+### - [x] A1. 연결 중 수신 루프가 CPU 코어 하나를 계속 사용
 
-- **문제**: `StartReading`은 `BytesToRead`가 0이어도 대기 없이 반복한다(`UTerminal/Models/Serial/SerialPortAdapter.cs:173-193`). `socat` 가상 포트에 연결만 하고 데이터를 보내지 않은 1초 동안 프로세스 CPU 시간이 `1020ms`였다.
-- **수정**: 읽을 바이트가 없으면 `await Task.Delay(1, token)`. 읽기 방식(`BytesToRead`만큼 읽기)은 바꾸지 않는다.
-- **검증**: 같은 `socat` 측정에서 CPU 시간이 크게 줄어든다. `SerialService` 테스트 통과.
+- **문제**: `StartReading`이 `BytesToRead`가 0이어도 대기 없이 반복한다. `socat` 가상 포트에 연결만 하고 데이터를 보내지 않은 1초 동안 프로세스 CPU 시간이 `1020ms`였다. 0일 때 `Task.Delay(1)`로 쉬어도 `210ms`였다.
+- **수정**: `BaseStream.ReadAsync`로 데이터가 올 때까지 기다린 뒤, 그 시점에 도착한 만큼(최대 `ReadBufferSize`) 읽는다(`UTerminal/Models/Serial/SerialPortAdapter.cs` `StartReading`).
+- **검증**: Linux + `socat`에서 연결 유지 1초 CPU 시간 `20ms`(포트를 열지 않은 경우 `0~10ms`). 100바이트 전송 시 100바이트 수신. 연결 → 해제를 3회 반복해도 매회 50바이트씩 정확히 수신. **Windows·macOS에서는 확인하지 않았다.** 해제 시 읽기가 취소되는 동작이 OS마다 다를 수 있으므로 실제 장치로 연결·해제·재연결을 확인해야 한다.
 
 ### - [ ] A2. 수신 패킷이 화면에 뒤섞인 순서로 표시될 수 있음
 
