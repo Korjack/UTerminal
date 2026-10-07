@@ -16,6 +16,57 @@ dotnet test UTerminal.Tests
 
 ---
 
+## 진행 상태 (이어서 작업하기)
+
+`/pre-task @docs/plan/csharp-code-review.md` 로 시작하면 이 절부터 이어서 진행한다. 필요한 파일은 모두 `fix/csharp-code-review` 브랜치에 커밋되어 있다.
+
+### 작업 환경
+
+- **브랜치**: `fix/csharp-code-review` (`dev`에서 분기). 다른 환경에서는 이 브랜치를 받아서 시작한다.
+- **완료 항목**: A0, A1 (체크 표시 참조)
+- **항목별 테스트**: 아직 고치지 않은 항목의 테스트는 `UTerminal.Tests/`에 `Skip = "<항목> 수정 전"`으로 들어 있다. `grep -rn 'Skip = ' UTerminal.Tests`로 목록을 볼 수 있다.
+
+  | 항목 | 테스트 |
+  |---|---|
+  | A2 | `Serial/SerialServiceTests.cs` `MsgReceived_PreservesPacketArrivalOrder` |
+  | A5 | `Parser/SerialPresetParserTests.cs` `ParseMessage_VariableField_ReadsLengthFromEveryOfferedLengthType` |
+  | A6 | `Parser/SerialPresetParserTests.cs` `GetTotalLength_ReflectsFieldsAddedAfterFirstCall`, `GetTotalLength_ReflectsClearedFields` |
+  | A8 | `PortManager/PortManagerTests.cs` `CustomSelectPort_WithNoPreviousSelection_SetsPortName`, `SelectPort_WithNoPreviousSelection_SetsPortName` |
+  | A9 | `PortManager/PortManagerTests.cs` `CustomSelectPort_EmptyPath_KeepsPreviousPortName` |
+  | D1 | `Parser/PresetJsonTests.cs` `SaveThenLoad_RestoresFields` |
+
+  A3은 테스트를 새로 작성한다. A4·A7은 빌드와 전체 테스트로 확인한다.
+
+- **수신 루프 측정 도구**: `SerialTest/CpuCheck/` (솔루션에 포함되지 않는 콘솔 프로그램). A1을 다른 OS에서 확인할 때 쓴다. Linux/macOS에서는 `socat`으로 가상 포트 쌍을 만들어 실행한다. Windows에서는 com0com 같은 가상 COM 포트 쌍이 필요하다.
+
+  ```bash
+  socat pty,raw,echo=0,link=/tmp/ttyA pty,raw,echo=0,link=/tmp/ttyB &
+  dotnet run --project SerialTest/CpuCheck -c Release -- /tmp/ttyA /tmp/ttyB
+  ```
+
+  출력의 `idle_cpu_ms_per_1s`가 수십 ms 이하이고, `round1~3`의 `received_total`이 `expected`와 같으면 정상이다.
+
+### 다음 작업
+
+1. **A2**: `UTerminal/Models/Serial/SerialService.cs`의 `RaiseMessageReceived`에서 `Task.Run` 루프를 `MsgReceived?.Invoke(this, message);`로 바꾼다.
+2. A3 → A9 순서로 진행한다. 각 항목은 아래 절차를 따른다.
+3. A 항목이 끝나면 D 항목의 결정을 유지보수자에게 요청한다.
+4. A1은 Windows·macOS 실제 장치로 연결·해제·재연결을 확인해야 한다(위 측정 도구 사용).
+
+### 항목별 절차
+
+1. 해당 항목 테스트의 `Skip`을 지우고 실패하는지 확인한다.
+2. 수정한 뒤 `dotnet test UTerminal.Tests`가 통과하는지 확인한다.
+3. 이 문서의 해당 항목을 `[x]`로 바꾸고, 실제 수정 방식이 "수정"에 적힌 것과 다르면 그 항목 내용을 고친다.
+4. `/pre-commit` 점검 후 변경 파일만 경로를 지정해 스테이징하고 `fix:` 커밋한다. `--amend`는 쓰지 않는다(파괴적 명령으로 분류되어 확인이 필요하다).
+
+### 진행 방식 (유지보수자 결정)
+
+- A 항목은 묻지 않고 수정·커밋한다. D 항목은 선택지만 기록하고 고치지 않는다.
+- push, 파일·브랜치 삭제, 외부 발송은 매번 확인을 받는다.
+
+---
+
 ## A. 자동 수정 항목
 
 ### - [x] A0. `SystemLogger`가 Avalonia 앱 밖에서 생성되지 않음
@@ -114,7 +165,7 @@ dotnet test UTerminal.Tests
 
 ### - [ ] D5. 장치 연결이 끊겨도 연결 상태가 유지됨
 
-- **문제**: 장치를 뽑아 수신 루프에서 예외가 나면 루프만 끝나고(`SerialPortAdapter.cs:200-203`), `MainViewModel.IsConnected`는 `true`로 남는다. 사용자는 Disconnect를 눌러야 다시 연결할 수 있다(추론. 실제 장치로 확인하지 않았다).
+- **문제**: 장치를 뽑아 수신 루프에서 예외가 나면 루프만 끝나고(`SerialPortAdapter.cs:199-202`), `MainViewModel.IsConnected`는 `true`로 남는다. 사용자는 Disconnect를 눌러야 다시 연결할 수 있다(추론. 실제 장치로 확인하지 않았다).
 - **결정할 것**: 끊김을 감지해 자동으로 연결 해제 상태로 바꿀지, 재연결을 시도할지.
 
 ### - [ ] D6. 커스텀 STX/ETX 입력 필터
@@ -131,7 +182,7 @@ dotnet test UTerminal.Tests
 
 ### - [ ] D8. 원시 구독자 안에서 구독을 해지하면 수신 루프 종료
 
-- **문제**: `BroadcastRawData`는 읽기 락을 쥔 채 구독자를 호출한다(`SerialPortAdapter.cs:212-227`). 구독자 안에서 해지하면 `EnterWriteLock`에서 `LockRecursionException`이 나고 수신 루프가 끝난다(`ARCHITECTURE.md` 8.2). 지금은 그렇게 호출하는 코드가 없다.
+- **문제**: `BroadcastRawData`는 읽기 락을 쥔 채 구독자를 호출한다(`SerialPortAdapter.cs:211-226`). 구독자 안에서 해지하면 `EnterWriteLock`에서 `LockRecursionException`이 나고 수신 루프가 끝난다(`ARCHITECTURE.md` 8.2). 지금은 그렇게 호출하는 코드가 없다.
 - **선택지**
   - (추천) 브로드캐스트 시 배열 참조만 읽고 락 없이 호출한다. 구독·해지는 이미 새 배열로 교체하므로 가능하다. `CLAUDE.md`의 "`ReaderWriterLockSlim`으로 구독자 배열을 보호" 규칙을 바꿔야 한다.
   - 현재 구조를 유지하고, 구독자 안에서 해지하지 말라는 규칙만 둔다(`ARCHITECTURE.md` 8.2에 이미 있다).
